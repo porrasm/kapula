@@ -288,7 +288,9 @@ test.describe("stick mode swapping", () => {
   test("only full and relative sticks are toggleable", () => {
     expect(isStickModeToggleable(full)).toBe(true);
     expect(isStickModeToggleable(relative)).toBe(true);
-    expect(isStickModeToggleable(xOnly)).toBe(false);
+    expect(
+      isStickModeToggleable(xOnly as unknown as Parameters<typeof isStickModeToggleable>[0]),
+    ).toBe(false);
     expect(isStickModeToggleable(button)).toBe(false);
     expect(toggleStickMode(null, "landscape", xOnly)).toBeNull();
     expect(toggleStickMode(null, "landscape", button)).toBeNull();
