@@ -1,0 +1,35 @@
+{
+  "name": "@kapula/server",
+  "version": "0.1.0",
+  "description": "Kapula server core: sessions, signaling and the driver/player/host HTTP APIs over a pluggable store",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./testing": { "types": "./dist/testing/index.d.ts", "default": "./dist/testing/index.js" }
+  },
+  "typesVersions": { "*": { "testing": ["./dist/testing/index.d.ts"] } },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@kapula/protocol": "^0.1.0",
+    "express": "^4.21.0",
+    "ws": "^8.18.0",
+    "zod": "^4.6.5"
+  },
+  "peerDependencies": {
+    "@playwright/test": ">=1.40"
+  },
+  "peerDependenciesMeta": {
+    "@playwright/test": { "optional": true }
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/ws": "^8.5.12"
+  }
+}
