@@ -1,0 +1,32 @@
+{
+  "name": "kapula",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Kapula: phones as controllers for any game or desktop app — protocol, server, phone UI and a reference host",
+  "type": "module",
+  "workspaces": [
+    "packages/protocol",
+    "packages/server",
+    "packages/phone",
+    "apps/host"
+  ],
+  "scripts": {
+    "build": "npm run build:packages && npm run build --workspace=apps/host",
+    "build:packages": "tsc -b packages/protocol packages/server packages/phone && npm run copy-assets --workspace=packages/phone",
+    "typecheck": "npm run build:packages && tsc --noEmit -p apps/host && tsc --noEmit -p tests",
+    "dev": "npm run build:packages && npm run dev --workspace=apps/host",
+    "start": "npm run start --workspace=apps/host",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "npm run build:packages && playwright test --project=unit",
+    "test:e2e": "npm run build:packages && PW_E2E=1 playwright test --project=e2e",
+    "clean": "rm -rf packages/*/dist packages/*/tsconfig.tsbuildinfo apps/host/dist"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}
