@@ -1,6 +1,6 @@
 {
   "name": "@kapula/server",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.1",
   "description": "Kapula server core: sessions, signaling and the driver/player/host HTTP APIs over a pluggable store",
   "license": "MIT",
   "repository": {
@@ -54,7 +54,7 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@kapula/protocol": "^0.1.0",
+    "@kapula/protocol": "0.1.0-alpha.1",
     "express": "^4.21.0",
     "ws": "^8.18.0",
     "zod": "^4.6.5"

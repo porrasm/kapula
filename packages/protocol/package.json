@@ -1,6 +1,6 @@
 {
   "name": "@kapula/protocol",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.1",
   "description": "Kapula wire protocol: zod schemas, constants and types shared by the server, the phone UI and drivers",
   "license": "MIT",
   "repository": {

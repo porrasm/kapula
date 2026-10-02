@@ -11,9 +11,9 @@
     "start": "node dist/server/main.js"
   },
   "dependencies": {
-    "@kapula/phone": "^0.1.0",
-    "@kapula/protocol": "^0.1.0",
-    "@kapula/server": "^0.1.0",
+    "@kapula/phone": "0.1.0-alpha.1",
+    "@kapula/protocol": "0.1.0-alpha.1",
+    "@kapula/server": "0.1.0-alpha.1",
     "@tanstack/react-query": "^5.103.2",
     "cors": "^2.8.5",
     "express": "^4.21.0",

@@ -1,6 +1,6 @@
 {
   "name": "@kapula/phone",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.1",
   "description": "Kapula phone UI: the React screens a player uses to join a session and play, host-agnostic",
   "license": "MIT",
   "repository": {
@@ -57,7 +57,7 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@kapula/protocol": "^0.1.0",
+    "@kapula/protocol": "0.1.0-alpha.1",
     "zod": "^4.6.5"
   },
   "peerDependencies": {
