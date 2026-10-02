@@ -29,15 +29,23 @@ if (execSync("git status --porcelain").toString().trim()) {
   console.error("commit or stash your changes first");
   process.exit(1);
 }
-run(`node scripts/set-version.mjs ${version}`);
-run("npm install --package-lock-only");
-run("npm run build:packages");
-run("npx playwright test --project=unit");
-for (const name of ["protocol", "server", "phone"]) {
-  run(`npm publish --workspace=packages/${name} --tag ${tag}${dryRun ? " --dry-run" : ""}`);
+const restore = () => run("git checkout -- packages apps/host/package.json package-lock.json");
+try {
+  run(`node scripts/set-version.mjs ${version}`);
+  run("npm install --package-lock-only");
+  run("npm run build:packages");
+  run("npx playwright test --project=unit");
+  for (const name of ["protocol", "server", "phone"]) {
+    run(`npm publish --workspace=packages/${name} --tag ${tag}${dryRun ? " --dry-run" : ""}`);
+  }
+} catch (e) {
+  // Nothing published yet, or a publish failed part-way: either way the
+  // version bump must not linger uncommitted.
+  restore();
+  throw e;
 }
 if (dryRun) {
-  run("git checkout -- packages package-lock.json");
+  restore();
   console.log("\ndry run: versions restored, nothing published");
 } else {
   run(`git commit -am "Release ${version}"`);
