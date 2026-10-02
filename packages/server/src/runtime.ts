@@ -1,20 +1,20 @@
 import { WebSocket } from "ws";
 import {
-  GAMEPAD_PROTOCOL_VERSION,
-  gamepadBackgroundFitSchema,
-  gamepadSessionConfigSchema,
-  type GamepadBackground,
-  type GamepadPlayerInfo,
-  type GamepadServerMessage,
-  type GamepadSessionSnapshot,
-  type GamepadSessionState,
-  type GamepadStateChangeReason,
+  KAPULA_PROTOCOL_VERSION,
+  kapulaBackgroundFitSchema,
+  kapulaSessionConfigSchema,
+  type KapulaBackground,
+  type KapulaPlayerInfo,
+  type KapulaServerMessage,
+  type KapulaSessionSnapshot,
+  type KapulaSessionState,
+  type KapulaStateChangeReason,
 } from "@kapula/protocol";
-import type { GamepadContext } from "./context.js";
+import type { KapulaContext } from "./context.js";
 import type {
-  GamepadBackgroundMeta,
-  GamepadPlayerRecord,
-  GamepadSessionRecord,
+  KapulaBackgroundMeta,
+  KapulaPlayerRecord,
+  KapulaSessionRecord,
 } from "./store.js";
 
 /**
@@ -25,7 +25,7 @@ import type {
 export type SessionRuntime = {
   sessionId: string;
   /** Mirrors the stored state so the hot input path never reads the store. */
-  state: GamepadSessionState;
+  state: KapulaSessionState;
   driver: WebSocket | null;
   host: WebSocket | null;
   players: Map<string, WebSocket>;
@@ -41,23 +41,23 @@ export type SessionRuntime = {
   driverLostTimer: NodeJS.Timeout | null;
 };
 
-export const parseSessionConfig = (session: GamepadSessionRecord) =>
+export const parseSessionConfig = (session: KapulaSessionRecord) =>
   // A not_initialized session has no config yet (the host connects before the
   // driver's setup call); the defaults stand in until then.
-  gamepadSessionConfigSchema.parse(session.config ?? {});
+  kapulaSessionConfigSchema.parse(session.config ?? {});
 
-const safeSend = (ws: WebSocket, msg: GamepadServerMessage) => {
+const safeSend = (ws: WebSocket, msg: KapulaServerMessage) => {
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(msg));
   }
 };
 
-export const sendTo = (ws: WebSocket, msg: GamepadServerMessage) =>
+export const sendTo = (ws: WebSocket, msg: KapulaServerMessage) =>
   safeSend(ws, msg);
 
 export const sendToDriver = (
   runtime: SessionRuntime,
-  msg: GamepadServerMessage,
+  msg: KapulaServerMessage,
 ) => {
   if (runtime.driver) safeSend(runtime.driver, msg);
 };
@@ -65,7 +65,7 @@ export const sendToDriver = (
 /** Sends to driver, host and every player (input never goes through here). */
 export const broadcast = (
   runtime: SessionRuntime,
-  msg: GamepadServerMessage,
+  msg: KapulaServerMessage,
 ) => {
   if (runtime.driver) safeSend(runtime.driver, msg);
   if (runtime.host) safeSend(runtime.host, msg);
@@ -76,8 +76,8 @@ export const broadcast = (
 
 export const toPlayerInfo = (
   runtime: SessionRuntime,
-  player: GamepadPlayerRecord,
-): GamepadPlayerInfo => ({
+  player: KapulaPlayerRecord,
+): KapulaPlayerInfo => ({
   playerId: player.id,
   name: player.name,
   color: player.color,
@@ -88,8 +88,8 @@ export const toPlayerInfo = (
 
 export const applyStateChange = (
   runtime: SessionRuntime,
-  state: GamepadSessionState,
-  reason: GamepadStateChangeReason,
+  state: KapulaSessionState,
+  reason: KapulaStateChangeReason,
 ) => {
   runtime.state = state;
   broadcast(runtime, { type: "state_changed", state, reason });
@@ -102,9 +102,9 @@ export const LEFT_CLOSE = { code: 1000, reason: "Left session" };
 /**
  * The per-process registry of session runtimes and everything that touches
  * both the sockets and the store: snapshots, the driver-lost watchdog, player
- * removal, session end. One per gamepad server instance.
+ * removal, session end. One per Kapula server instance.
  */
-export const createSessionRuntimes = (ctx: GamepadContext) => {
+export const createSessionRuntimes = (ctx: KapulaContext) => {
   const { store, logger, config } = ctx;
   const runtimes = new Map<string, SessionRuntime>();
 
@@ -112,9 +112,9 @@ export const createSessionRuntimes = (ctx: GamepadContext) => {
   const backgroundUrl = (key: string): string =>
     `${config.basePath}/background/${key}`;
 
-  const toBackground = (meta: GamepadBackgroundMeta): GamepadBackground => ({
+  const toBackground = (meta: KapulaBackgroundMeta): KapulaBackground => ({
     url: backgroundUrl(meta.key),
-    fit: gamepadBackgroundFitSchema.parse(meta.fit),
+    fit: kapulaBackgroundFitSchema.parse(meta.fit),
   });
 
   const endLostSession = async (sessionId: string) => {
@@ -123,10 +123,10 @@ export const createSessionRuntimes = (ctx: GamepadContext) => {
       // Already ended by someone else (driver end, host end, cleanup) —
       // nothing to announce; whoever ended it did.
       if (!ended) return;
-      logger.info(`[gamepad] session ${sessionId} ended: driver lost`);
+      logger.info(`[kapula] session ${sessionId} ended: driver lost`);
       notifySessionEnded(sessionId, "driver_lost");
     } catch (e) {
-      logger.error("[gamepad] ending a driver-lost session failed", e);
+      logger.error("[kapula] ending a driver-lost session failed", e);
     }
   };
 
@@ -173,11 +173,11 @@ export const createSessionRuntimes = (ctx: GamepadContext) => {
       if (awayMs === null || runtime.driver?.readyState === WebSocket.OPEN) return;
       armDriverLostTimer(runtime, Date.now() - awayMs);
     } catch (e) {
-      logger.error("[gamepad] resuming the driver-lost clock failed", e);
+      logger.error("[kapula] resuming the driver-lost clock failed", e);
     }
   };
 
-  const getRuntime = (session: GamepadSessionRecord): SessionRuntime => {
+  const getRuntime = (session: KapulaSessionRecord): SessionRuntime => {
     let runtime = runtimes.get(session.id);
     if (!runtime) {
       runtime = {
@@ -204,15 +204,15 @@ export const createSessionRuntimes = (ctx: GamepadContext) => {
     runtimes.get(sessionId);
 
   const buildSnapshot = async (
-    session: GamepadSessionRecord,
-  ): Promise<GamepadSessionSnapshot> => {
+    session: KapulaSessionRecord,
+  ): Promise<KapulaSessionSnapshot> => {
     const runtime = getRuntime(session);
     const [players, background] = await Promise.all([
       store.getActivePlayersBySession(session.id),
       store.getSessionBackgroundMeta(session.id),
     ]);
     return {
-      protocolVersion: GAMEPAD_PROTOCOL_VERSION,
+      protocolVersion: KAPULA_PROTOCOL_VERSION,
       sessionId: session.id,
       state: runtime.state,
       config: parseSessionConfig(session),
@@ -230,7 +230,7 @@ export const createSessionRuntimes = (ctx: GamepadContext) => {
    */
   const notifyBackgroundChanged = (
     sessionId: string,
-    background: GamepadBackground | null,
+    background: KapulaBackground | null,
   ) => {
     const runtime = runtimes.get(sessionId);
     if (!runtime) return;
@@ -246,7 +246,7 @@ export const createSessionRuntimes = (ctx: GamepadContext) => {
     runtime.lastActivityTouch = now;
     store
       .touchSessionActivity(runtime.sessionId)
-      .catch((e) => logger.error("[gamepad] touchSessionActivity failed", e));
+      .catch((e) => logger.error("[kapula] touchSessionActivity failed", e));
   };
 
   /**
@@ -282,7 +282,7 @@ export const createSessionRuntimes = (ctx: GamepadContext) => {
    */
   const notifySessionEnded = (
     sessionId: string,
-    reason: GamepadStateChangeReason,
+    reason: KapulaStateChangeReason,
   ) => {
     const runtime = runtimes.get(sessionId);
     if (!runtime) return;
@@ -298,8 +298,8 @@ export const createSessionRuntimes = (ctx: GamepadContext) => {
 
   /** Lets the join path announce a player who joined over HTTP. */
   const notifyPlayerJoined = (
-    session: GamepadSessionRecord,
-    player: GamepadPlayerRecord,
+    session: KapulaSessionRecord,
+    player: KapulaPlayerRecord,
   ) => {
     const runtime = getRuntime(session);
     broadcast(runtime, {
@@ -309,7 +309,7 @@ export const createSessionRuntimes = (ctx: GamepadContext) => {
   };
 
   /** Lets the driver setup endpoint push the new state + snapshot to the host. */
-  const notifySessionSetup = async (session: GamepadSessionRecord) => {
+  const notifySessionSetup = async (session: KapulaSessionRecord) => {
     const runtime = getRuntime(session);
     runtime.state = "waiting_for_players";
     // The driver has the token now but no socket yet: a driver that never

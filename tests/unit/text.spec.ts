@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 import {
-  GAMEPAD_TEXT_MAX_LENGTH,
+  KAPULA_TEXT_MAX_LENGTH,
   controlSchemaSchema,
-  gamepadPlayerClientMessageSchema,
-  gamepadServerMessageSchema,
+  kapulaPlayerClientMessageSchema,
+  kapulaServerMessageSchema,
 } from "@kapula/protocol";
 import {
   describeServerMessage,
@@ -45,10 +45,10 @@ test.describe("text control schema", () => {
   test("maxLength is 1 up to the protocol ceiling", () => {
     expect(schema([{ type: "text", id: "a", maxLength: 0 }]).success).toBe(false);
     expect(
-      schema([{ type: "text", id: "a", maxLength: GAMEPAD_TEXT_MAX_LENGTH }]).success,
+      schema([{ type: "text", id: "a", maxLength: KAPULA_TEXT_MAX_LENGTH }]).success,
     ).toBe(true);
     expect(
-      schema([{ type: "text", id: "a", maxLength: GAMEPAD_TEXT_MAX_LENGTH + 1 }])
+      schema([{ type: "text", id: "a", maxLength: KAPULA_TEXT_MAX_LENGTH + 1 }])
         .success,
     ).toBe(false);
     expect(schema([{ type: "text", id: "a", maxLength: 1.5 }]).success).toBe(false);
@@ -57,7 +57,7 @@ test.describe("text control schema", () => {
 
 test.describe("text messages", () => {
   test("the player sends a whole text for one control", () => {
-    const parse = (v: unknown) => gamepadPlayerClientMessageSchema.safeParse(v).success;
+    const parse = (v: unknown) => kapulaPlayerClientMessageSchema.safeParse(v).success;
     expect(parse({ type: "text", controlId: "answer", text: "Helsinki" })).toBe(true);
     expect(parse({ type: "text", controlId: "answer", text: "" })).toBe(true);
     expect(parse({ type: "text", controlId: "answer", text: "ä😀\n" })).toBe(true);
@@ -65,7 +65,7 @@ test.describe("text messages", () => {
       parse({
         type: "text",
         controlId: "answer",
-        text: "x".repeat(GAMEPAD_TEXT_MAX_LENGTH + 1),
+        text: "x".repeat(KAPULA_TEXT_MAX_LENGTH + 1),
       }),
     ).toBe(false);
     expect(parse({ type: "text", controlId: "Bad Id", text: "x" })).toBe(false);
@@ -73,7 +73,7 @@ test.describe("text messages", () => {
   });
 
   test("the driver receives it with the player id", () => {
-    const parse = (v: unknown) => gamepadServerMessageSchema.safeParse(v).success;
+    const parse = (v: unknown) => kapulaServerMessageSchema.safeParse(v).success;
     expect(
       parse({ type: "text", playerId: "p1", controlId: "answer", text: "Helsinki" }),
     ).toBe(true);

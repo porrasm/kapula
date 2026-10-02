@@ -1,13 +1,13 @@
-import type { GamepadServerMessage, GamepadSessionSnapshot } from "@kapula/protocol";
+import type { KapulaServerMessage, KapulaSessionSnapshot } from "@kapula/protocol";
 
 /**
  * Folds roster/state events into the last full snapshot. The server sends a
  * fresh snapshot on every (re)connect, so events only need to patch it.
  */
 export const applyServerMessage = (
-  snapshot: GamepadSessionSnapshot | null,
-  msg: GamepadServerMessage,
-): GamepadSessionSnapshot | null => {
+  snapshot: KapulaSessionSnapshot | null,
+  msg: KapulaServerMessage,
+): KapulaSessionSnapshot | null => {
   if (msg.type === "snapshot") return msg.snapshot;
   if (!snapshot) return null;
 

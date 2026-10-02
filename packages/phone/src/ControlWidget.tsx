@@ -1,4 +1,4 @@
-import type { GamepadInputValue } from "@kapula/protocol";
+import type { KapulaInputValue } from "@kapula/protocol";
 import { roundAxis } from "./axis-utils.js";
 import { Dpad } from "./Dpad.js";
 import { Joystick } from "./Joystick.js";
@@ -14,7 +14,7 @@ type ControlWidgetProps = {
    * layout editor shows the real controls under its drag handles.
    */
   inert?: boolean;
-  setControl: (id: string, value: GamepadInputValue, immediate: boolean) => void;
+  setControl: (id: string, value: KapulaInputValue, immediate: boolean) => void;
   /** Opens the text field of a `text` control (the live controller only). */
   onOpenText?: (controlId: string) => void;
 };

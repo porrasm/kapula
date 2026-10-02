@@ -1,5 +1,5 @@
 import { test, expect, type Browser, type Page } from "@playwright/test";
-import { GAMEPAD_METADATA_MAX_LENGTH } from "@kapula/protocol";
+import { KAPULA_METADATA_MAX_LENGTH } from "@kapula/protocol";
 import { devLogin, hostCall } from "./ws-utils";
 import { TestDriver } from "./test-driver";
 
@@ -337,7 +337,7 @@ test("oversized session metadata is rejected at creation", async ({
 }) => {
   await devLogin(request, uniqueEmail());
   const result = await hostCall(request, "createSession", {
-    metadata: "x".repeat(GAMEPAD_METADATA_MAX_LENGTH + 1),
+    metadata: "x".repeat(KAPULA_METADATA_MAX_LENGTH + 1),
   });
   expect(result.error).toBeTruthy();
   expect(result.error.data.code).toBe("BAD_REQUEST");

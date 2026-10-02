@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { GAMEPAD_CODE_LENGTH } from "@kapula/protocol";
+import { KAPULA_CODE_LENGTH } from "@kapula/protocol";
 import { Button, Card } from "./ui.js";
 import { usePlayerApi } from "./player-api.js";
 import { saveStoredPlayer, type StoredPlayer } from "./player-storage.js";
@@ -21,9 +21,9 @@ export const JoinScreen = ({ initialJoinCode, onJoined }: JoinScreenProps) => {
   const [pickedName, setPickedName] = useState<string | null>(null);
   const api = usePlayerApi();
 
-  const codeComplete = joinCode.length === GAMEPAD_CODE_LENGTH;
+  const codeComplete = joinCode.length === KAPULA_CODE_LENGTH;
   const joinInfoQuery = useQuery({
-    queryKey: ["gamepad", "join-info", joinCode],
+    queryKey: ["kapula", "join-info", joinCode],
     queryFn: () => api.fetchJoinInfo(joinCode),
     enabled: codeComplete,
     // The lobby fills up while the form is open; keep the count fresh.
@@ -70,7 +70,7 @@ export const JoinScreen = ({ initialJoinCode, onJoined }: JoinScreenProps) => {
           <input
             className="w-full rounded-kp bg-kp-bg-tertiary border border-kp-border px-3 py-2 text-kp-text-primary text-xl tracking-[0.3em] font-mono uppercase"
             value={joinCode}
-            maxLength={GAMEPAD_CODE_LENGTH}
+            maxLength={KAPULA_CODE_LENGTH}
             autoCapitalize="characters"
             autoCorrect="off"
             spellCheck={false}

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import {
-  gamepadInputFrameSchema,
+  kapulaInputFrameSchema,
   PHYSICAL_GAMEPAD_CONTROLS,
 } from "@kapula/protocol";
 import {
@@ -81,7 +81,7 @@ test.describe("readPhysicalGamepad", () => {
     press(reading, 12);
     press(reading, 15);
     reading.axes = [0.123456, 0.9, -0.2, 0.05];
-    const frame = gamepadInputFrameSchema.safeParse({
+    const frame = kapulaInputFrameSchema.safeParse({
       seq: 1,
       controls: readPhysicalGamepad(reading),
     });
@@ -91,7 +91,7 @@ test.describe("readPhysicalGamepad", () => {
     wild.axes = [5, Number.NaN, -3, Number.POSITIVE_INFINITY];
     press(wild, 7, 4);
     expect(
-      gamepadInputFrameSchema.safeParse({
+      kapulaInputFrameSchema.safeParse({
         seq: 2,
         controls: readPhysicalGamepad(wild),
       }).success,

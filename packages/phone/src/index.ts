@@ -10,7 +10,7 @@
 export {
   KapulaPlayerProvider,
   KAPULA_PLAYER_DEFAULTS,
-  buildGamepadWsUrl,
+  buildKapulaWsUrl,
   useKapulaConfig,
   type KapulaPlayerConfig,
 } from "./config.js";
@@ -22,7 +22,7 @@ export { MissingRoster, PlayerList } from "./PlayerList.js";
 export { Controller } from "./Controller.js";
 export { OrientedSurface } from "./OrientedSurface.js";
 export { PhysicalGamepadPreview } from "./PhysicalGamepadPanel.js";
-export { useGamepadSocket, type GamepadSocket } from "./useGamepadSocket.js";
+export { useKapulaSocket, type KapulaSocket } from "./useKapulaSocket.js";
 export { useNoPinchZoom } from "./useViewportGuard.js";
 export { Badge, Button, Card, LoadingState } from "./ui.js";
 export * from "./utils.js";

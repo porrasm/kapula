@@ -16,10 +16,10 @@ import { z } from "zod";
  * next to 1 and negotiated with `protocolVersion` at setup.
  *
  * Drivers receive the version in the setup response and in every snapshot.
- * See backend/src/apps/gamepad/GAMEPAD.md for the full protocol documentation
- * and BACKLOG.md next to it for the work list.
+ * See docs/KAPULA.md in the repository for the full protocol documentation
+ * and docs/BACKLOG.md for the work list.
  */
-export const GAMEPAD_PROTOCOL_VERSION = 1;
+export const KAPULA_PROTOCOL_VERSION = 1;
 
 /**
  * How long a session survives without its driver. A driver that stays away
@@ -28,46 +28,46 @@ export const GAMEPAD_PROTOCOL_VERSION = 1;
  * `driver_lost`. Recovery is a *new* session — see `roster` in the session
  * config for the fast path.
  */
-export const GAMEPAD_DRIVER_LOST_TIMEOUT_MS = 3 * 60_000;
+export const KAPULA_DRIVER_LOST_TIMEOUT_MS = 3 * 60_000;
 
-export const gamepadSessionStateSchema = z.enum([
+export const kapulaSessionStateSchema = z.enum([
   "not_initialized",
   "waiting_for_players",
   "in_progress",
   "paused",
   "ended",
 ]);
-export type GamepadSessionState = z.infer<typeof gamepadSessionStateSchema>;
+export type KapulaSessionState = z.infer<typeof kapulaSessionStateSchema>;
 
 // --- Player names and colors ---
 
-export const GAMEPAD_PLAYER_NAME_MAX_LENGTH = 16;
+export const KAPULA_PLAYER_NAME_MAX_LENGTH = 16;
 
 /** Trims and collapses internal whitespace; validation happens after this. */
-export const normalizeGamepadPlayerName = (raw: string): string =>
+export const normalizeKapulaPlayerName = (raw: string): string =>
   raw.trim().replace(/\s+/g, " ");
 
 // Unicode letters and digits plus space, dash and underscore — no random
 // symbols. Applied after normalization.
 const PLAYER_NAME_PATTERN = /^[\p{L}\p{N} _-]+$/u;
 
-export const gamepadPlayerNameSchema = z
+export const kapulaPlayerNameSchema = z
   .string()
-  .transform(normalizeGamepadPlayerName)
+  .transform(normalizeKapulaPlayerName)
   .pipe(
     z
       .string()
       .min(1, "Name is required")
-      .max(GAMEPAD_PLAYER_NAME_MAX_LENGTH, "Name is too long")
+      .max(KAPULA_PLAYER_NAME_MAX_LENGTH, "Name is too long")
       .regex(PLAYER_NAME_PATTERN, "Only letters, numbers, space, - and _"),
   );
 
-export const gamepadColorSchema = z
+export const kapulaColorSchema = z
   .string()
   .regex(/^#[0-9a-fA-F]{6}$/, "Colors must be #RRGGBB hex");
 
 /** Fallback palette when the driver does not provide one (12 = player cap). */
-export const GAMEPAD_DEFAULT_COLORS = [
+export const KAPULA_DEFAULT_COLORS = [
   "#FF6B6B", // red
   "#4D96FF", // blue
   "#6BCB77", // green
@@ -104,18 +104,18 @@ const idSchema = z
  *   fingers curl.
  * - "aux": the small top-center row for rarely used controls (pause, menu).
  */
-export const gamepadControlZoneSchema = z.enum([
+export const kapulaControlZoneSchema = z.enum([
   "left",
   "right",
   "shoulder-left",
   "shoulder-right",
   "aux",
 ]);
-export type GamepadControlZone = z.infer<typeof gamepadControlZoneSchema>;
+export type KapulaControlZone = z.infer<typeof kapulaControlZoneSchema>;
 
 /** Visual weight relative to the zone's default — never pixels. */
-export const gamepadControlSizeSchema = z.enum(["small", "medium", "large"]);
-export type GamepadControlSize = z.infer<typeof gamepadControlSizeSchema>;
+export const kapulaControlSizeSchema = z.enum(["small", "medium", "large"]);
+export type KapulaControlSize = z.infer<typeof kapulaControlSizeSchema>;
 
 /**
  * Exact placement — the one hint that is geometry: the control's center as
@@ -128,25 +128,25 @@ export type GamepadControlSize = z.infer<typeof gamepadControlSizeSchema>;
  * Players may still move it unless the config sets
  * `disallowLayoutCustomization`.
  */
-export const gamepadControlPositionSchema = z.number().min(0).max(100);
+export const kapulaControlPositionSchema = z.number().min(0).max(100);
 
 /**
  * A button's outline: "round" (default — a circle under a thumb, a pill on
  * the shoulder / aux rows) or "rect", the same box with squared-off corners.
  * Only the look changes: the engine sizes and places both the same way.
  */
-export const gamepadButtonShapeSchema = z.enum(["round", "rect"]);
-export type GamepadButtonShape = z.infer<typeof gamepadButtonShapeSchema>;
+export const kapulaButtonShapeSchema = z.enum(["round", "rect"]);
+export type KapulaButtonShape = z.infer<typeof kapulaButtonShapeSchema>;
 
-export const gamepadButtonControlSchema = z.object({
+export const kapulaButtonControlSchema = z.object({
   type: z.literal("button"),
   id: idSchema,
   label: z.string().min(1).max(16),
-  zone: gamepadControlZoneSchema.optional(),
-  size: gamepadControlSizeSchema.optional(),
-  x: gamepadControlPositionSchema.optional(),
-  y: gamepadControlPositionSchema.optional(),
-  shape: gamepadButtonShapeSchema.optional(),
+  zone: kapulaControlZoneSchema.optional(),
+  size: kapulaControlSizeSchema.optional(),
+  x: kapulaControlPositionSchema.optional(),
+  y: kapulaControlPositionSchema.optional(),
+  shape: kapulaButtonShapeSchema.optional(),
 });
 
 /**
@@ -161,24 +161,24 @@ export const gamepadButtonControlSchema = z.object({
  * - "dpad": 9 discrete directions, sent as a string only when the direction
  *   changes — no intermediate values, so far fewer input frames
  */
-export const gamepadJoystickModeSchema = z.enum([
+export const kapulaJoystickModeSchema = z.enum([
   "full",
   "relative",
   "x",
   "y",
   "dpad",
 ]);
-export type GamepadJoystickMode = z.infer<typeof gamepadJoystickModeSchema>;
+export type KapulaJoystickMode = z.infer<typeof kapulaJoystickModeSchema>;
 
-export const gamepadJoystickControlSchema = z.object({
+export const kapulaJoystickControlSchema = z.object({
   type: z.literal("joystick"),
   id: idSchema,
   label: z.string().min(1).max(16).optional(),
-  mode: gamepadJoystickModeSchema.default("full"),
-  zone: gamepadControlZoneSchema.optional(),
-  size: gamepadControlSizeSchema.optional(),
-  x: gamepadControlPositionSchema.optional(),
-  y: gamepadControlPositionSchema.optional(),
+  mode: kapulaJoystickModeSchema.default("full"),
+  zone: kapulaControlZoneSchema.optional(),
+  size: kapulaControlSizeSchema.optional(),
+  x: kapulaControlPositionSchema.optional(),
+  y: kapulaControlPositionSchema.optional(),
 });
 
 /**
@@ -189,10 +189,10 @@ export const gamepadJoystickControlSchema = z.object({
  * - "x": roll only (tilt the screen's right edge down = positive) — `{x}`
  * - "y": pitch only (tilt the screen's top edge toward you = positive) — `{y}`
  */
-export const gamepadGyroModeSchema = z.enum(["full", "x", "y"]);
-export type GamepadGyroMode = z.infer<typeof gamepadGyroModeSchema>;
+export const kapulaGyroModeSchema = z.enum(["full", "x", "y"]);
+export type KapulaGyroMode = z.infer<typeof kapulaGyroModeSchema>;
 
-export const GAMEPAD_GYRO_RANGE_DEFAULT = 45;
+export const KAPULA_GYRO_RANGE_DEFAULT = 45;
 
 /**
  * A hardware tilt sensor, not an on-screen control: it occupies no space in
@@ -203,12 +203,12 @@ export const GAMEPAD_GYRO_RANGE_DEFAULT = 45;
  * so drivers offering gyro schemas should always include a gyro-free
  * fallback schema.
  */
-export const gamepadGyroControlSchema = z.object({
+export const kapulaGyroControlSchema = z.object({
   type: z.literal("gyro"),
   id: idSchema,
-  mode: gamepadGyroModeSchema.default("full"),
+  mode: kapulaGyroModeSchema.default("full"),
   /** Degrees of tilt from the calibrated neutral that count as full deflection. */
-  range: z.number().min(5).max(90).default(GAMEPAD_GYRO_RANGE_DEFAULT),
+  range: z.number().min(5).max(90).default(KAPULA_GYRO_RANGE_DEFAULT),
 });
 
 /**
@@ -216,22 +216,22 @@ export const gamepadGyroControlSchema = z.object({
  * — emulators above all (Dolphin reconstructs a Wii Remote's accelerometer
  * and MotionPlus from exactly this feed). Unlike `gyro`, nothing is
  * calibrated, dead-zoned, clamped or remapped: samples stream in the device
- * frame in a separate `motion` message (see `gamepadMotionSampleSchema`),
+ * frame in a separate `motion` message (see `kapulaMotionSampleSchema`),
  * outside the coalesced input frames, at the sensor rate (~60 Hz on phones).
  * Like `gyro` it occupies no layout space and needs a usable sensor, so a
  * motion-free fallback schema is the recommended companion.
  */
-export const gamepadMotionControlSchema = z.object({
+export const kapulaMotionControlSchema = z.object({
   type: z.literal("motion"),
   id: idSchema,
 });
 
 /** Most fingers a `raw` control reports at once (a two-handed full grab). */
-export const GAMEPAD_RAW_MAX_TOUCHES = 10;
+export const KAPULA_RAW_MAX_TOUCHES = 10;
 
 /**
  * The whole controller box as one touch surface: every finger on the
- * background and where it is (see `gamepadRawTouchSchema`). For drivers that
+ * background and where it is (see `kapulaRawTouchSchema`). For drivers that
  * interpret touch themselves — gestures, a mirrored game screen the player
  * taps on. It lies under the schema's other controls: a finger that lands on
  * a button, stick or touchpad belongs to that control for as long as it is
@@ -239,13 +239,13 @@ export const GAMEPAD_RAW_MAX_TOUCHES = 10;
  * schema. Pairs naturally with a driver-posted background image, which fills
  * the same box the coordinates are measured in.
  */
-export const gamepadRawControlSchema = z.object({
+export const kapulaRawControlSchema = z.object({
   type: z.literal("raw"),
   id: idSchema,
 });
 
-export const GAMEPAD_TOUCHPAD_ASPECT_MIN = 0.25;
-export const GAMEPAD_TOUCHPAD_ASPECT_MAX = 4;
+export const KAPULA_TOUCHPAD_ASPECT_MIN = 0.25;
+export const KAPULA_TOUCHPAD_ASPECT_MAX = 4;
 
 /**
  * A laid-out multitouch pad — the `raw` surface as one control among others
@@ -258,23 +258,23 @@ export const GAMEPAD_TOUCHPAD_ASPECT_MAX = 4;
  * the pad's real one and the driver can turn 0–1 positions into isotropic
  * motion.
  */
-export const gamepadTouchpadControlSchema = z.object({
+export const kapulaTouchpadControlSchema = z.object({
   type: z.literal("touchpad"),
   id: idSchema,
   label: z.string().min(1).max(16).optional(),
   aspect: z
     .number()
-    .min(GAMEPAD_TOUCHPAD_ASPECT_MIN)
-    .max(GAMEPAD_TOUCHPAD_ASPECT_MAX)
+    .min(KAPULA_TOUCHPAD_ASPECT_MIN)
+    .max(KAPULA_TOUCHPAD_ASPECT_MAX)
     .optional(),
-  zone: gamepadControlZoneSchema.optional(),
-  size: gamepadControlSizeSchema.optional(),
-  x: gamepadControlPositionSchema.optional(),
-  y: gamepadControlPositionSchema.optional(),
+  zone: kapulaControlZoneSchema.optional(),
+  size: kapulaControlSizeSchema.optional(),
+  x: kapulaControlPositionSchema.optional(),
+  y: kapulaControlPositionSchema.optional(),
 });
 
 /** Longest text a `text` control sends (and its `maxLength` ceiling). */
-export const GAMEPAD_TEXT_MAX_LENGTH = 1000;
+export const KAPULA_TEXT_MAX_LENGTH = 1000;
 
 /**
  * A text answer typed on the player's own keyboard — the phone's on-screen
@@ -285,35 +285,35 @@ export const GAMEPAD_TEXT_MAX_LENGTH = 1000;
  * an event that must not be coalesced away. What was typed is not echoed to
  * the driver keystroke by keystroke: submit only. The field clears after
  * sending. `maxLength` caps it on the phone (default and ceiling
- * `GAMEPAD_TEXT_MAX_LENGTH`).
+ * `KAPULA_TEXT_MAX_LENGTH`).
  */
-export const gamepadTextControlSchema = z.object({
+export const kapulaTextControlSchema = z.object({
   type: z.literal("text"),
   id: idSchema,
   label: z.string().min(1).max(16).optional(),
-  maxLength: z.number().int().min(1).max(GAMEPAD_TEXT_MAX_LENGTH).optional(),
-  zone: gamepadControlZoneSchema.optional(),
-  size: gamepadControlSizeSchema.optional(),
-  x: gamepadControlPositionSchema.optional(),
-  y: gamepadControlPositionSchema.optional(),
-  shape: gamepadButtonShapeSchema.optional(),
+  maxLength: z.number().int().min(1).max(KAPULA_TEXT_MAX_LENGTH).optional(),
+  zone: kapulaControlZoneSchema.optional(),
+  size: kapulaControlSizeSchema.optional(),
+  x: kapulaControlPositionSchema.optional(),
+  y: kapulaControlPositionSchema.optional(),
+  shape: kapulaButtonShapeSchema.optional(),
 });
 
-export const gamepadControlSchema = z.discriminatedUnion("type", [
-  gamepadButtonControlSchema,
-  gamepadJoystickControlSchema,
-  gamepadGyroControlSchema,
-  gamepadMotionControlSchema,
-  gamepadRawControlSchema,
-  gamepadTouchpadControlSchema,
-  gamepadTextControlSchema,
+export const kapulaControlSchema = z.discriminatedUnion("type", [
+  kapulaButtonControlSchema,
+  kapulaJoystickControlSchema,
+  kapulaGyroControlSchema,
+  kapulaMotionControlSchema,
+  kapulaRawControlSchema,
+  kapulaTouchpadControlSchema,
+  kapulaTextControlSchema,
 ]);
-export type GamepadControl = z.infer<typeof gamepadControlSchema>;
-export type GamepadTouchpadControl = z.infer<typeof gamepadTouchpadControlSchema>;
-export type GamepadTextControl = z.infer<typeof gamepadTextControlSchema>;
-export type GamepadGyroControl = z.infer<typeof gamepadGyroControlSchema>;
-export type GamepadMotionControl = z.infer<typeof gamepadMotionControlSchema>;
-export type GamepadRawControl = z.infer<typeof gamepadRawControlSchema>;
+export type KapulaControl = z.infer<typeof kapulaControlSchema>;
+export type KapulaTouchpadControl = z.infer<typeof kapulaTouchpadControlSchema>;
+export type KapulaTextControl = z.infer<typeof kapulaTextControlSchema>;
+export type KapulaGyroControl = z.infer<typeof kapulaGyroControlSchema>;
+export type KapulaMotionControl = z.infer<typeof kapulaMotionControlSchema>;
+export type KapulaRawControl = z.infer<typeof kapulaRawControlSchema>;
 
 /**
  * Per-schema orientation hint. "auto" (default) lets the phone decide from
@@ -323,19 +323,19 @@ export type GamepadRawControl = z.infer<typeof gamepadRawControlSchema>;
  * device's own rotation does (rotating the content itself when the OS will
  * not), so a player can lock rotation on their phone and still play.
  */
-export const gamepadOrientationSchema = z.enum([
+export const kapulaOrientationSchema = z.enum([
   "auto",
   "landscape",
   "portrait",
 ]);
-export type GamepadOrientation = z.infer<typeof gamepadOrientationSchema>;
+export type KapulaOrientation = z.infer<typeof kapulaOrientationSchema>;
 
 export const controlSchemaSchema = z
   .object({
     id: idSchema,
     name: z.string().min(1).max(32),
-    orientation: gamepadOrientationSchema.default("auto"),
-    controls: z.array(gamepadControlSchema).min(1).max(16),
+    orientation: kapulaOrientationSchema.default("auto"),
+    controls: z.array(kapulaControlSchema).min(1).max(16),
   })
   .superRefine((schema, ctx) => {
     const ids = new Set<string>();
@@ -389,8 +389,8 @@ export const schemaNeedsMotionSensors = (schema: ControlSchema): boolean =>
 /** The schema's `raw` background touch surface, if it has one. */
 export const getRawControl = (
   schema: ControlSchema,
-): GamepadRawControl | undefined =>
-  schema.controls.find((c): c is GamepadRawControl => c.type === "raw");
+): KapulaRawControl | undefined =>
+  schema.controls.find((c): c is KapulaRawControl => c.type === "raw");
 
 /** Used when the driver sets up a session without custom schemas. */
 export const GENERIC_GAMEPAD_SCHEMA: ControlSchema = {
@@ -407,16 +407,16 @@ export const GENERIC_GAMEPAD_SCHEMA: ControlSchema = {
 // --- Driver keys ---
 
 /** Most emails that may be linked to one driver key. */
-export const GAMEPAD_DRIVER_KEY_MAX_LINKED_EMAILS = 20;
+export const KAPULA_DRIVER_KEY_MAX_LINKED_EMAILS = 20;
 
 /**
  * The emails linked to a driver key (who, besides the owner, may join the
  * key's private sessions): trimmed, lowercased — logins are matched on the
  * lowercased address — and deduplicated.
  */
-export const gamepadLinkedEmailsSchema = z
+export const kapulaLinkedEmailsSchema = z
   .array(z.string().trim().toLowerCase().pipe(z.email().max(254)))
-  .max(GAMEPAD_DRIVER_KEY_MAX_LINKED_EMAILS)
+  .max(KAPULA_DRIVER_KEY_MAX_LINKED_EMAILS)
   .transform((emails) => [...new Set(emails)]);
 
 // --- Physical gamepads (a real controller paired with the phone) ---
@@ -490,17 +490,17 @@ export const PHYSICAL_GAMEPAD_DPAD_BUTTONS = {
  * game configuration to the game through it. Capped so the field cannot be
  * used to flood the database.
  */
-export const GAMEPAD_METADATA_MAX_LENGTH = 4096;
+export const KAPULA_METADATA_MAX_LENGTH = 4096;
 
-export const gamepadSessionMetadataSchema = z
+export const kapulaSessionMetadataSchema = z
   .string()
-  .max(GAMEPAD_METADATA_MAX_LENGTH, "Metadata is too long");
+  .max(KAPULA_METADATA_MAX_LENGTH, "Metadata is too long");
 
 // --- Session config (posted by the driver at setup) ---
 
-export const GAMEPAD_MAX_PLAYERS_LIMIT = 12;
+export const KAPULA_MAX_PLAYERS_LIMIT = 12;
 /** Hard cap on control schemas per session — generous, but bounds payload size. */
-export const GAMEPAD_MAX_SCHEMAS = 32;
+export const KAPULA_MAX_SCHEMAS = 32;
 
 /**
  * A predefined player slot. A driver that already knows who is playing (it
@@ -508,11 +508,11 @@ export const GAMEPAD_MAX_SCHEMAS = 32;
  * at setup instead of letting players pick names; joining players then only
  * choose which slot is theirs.
  */
-export const gamepadRosterEntrySchema = z.object({
-  name: gamepadPlayerNameSchema,
-  color: gamepadColorSchema,
+export const kapulaRosterEntrySchema = z.object({
+  name: kapulaPlayerNameSchema,
+  color: kapulaColorSchema,
 });
-export type GamepadRosterEntry = z.infer<typeof gamepadRosterEntrySchema>;
+export type KapulaRosterEntry = z.infer<typeof kapulaRosterEntrySchema>;
 
 /**
  * A stable identity for the driver application, used by the player phone as
@@ -522,13 +522,13 @@ export type GamepadRosterEntry = z.infer<typeof gamepadRosterEntrySchema>;
  * layouts come back in every later session of that game. Without it edits
  * last only until the controller is closed.
  */
-export const gamepadDriverAppUuidSchema = z.string().uuid();
+export const kapulaDriverAppUuidSchema = z.string().uuid();
 
-const gamepadSessionConfigInputSchema = z.object({
+const kapulaSessionConfigInputSchema = z.object({
   /** Display name of the game, shown to players. */
   game: z.string().min(1).max(64).optional(),
-  /** Persistent per-game identity; see `gamepadDriverAppUuidSchema`. */
-  driverAppUuid: gamepadDriverAppUuidSchema.optional(),
+  /** Persistent per-game identity; see `kapulaDriverAppUuidSchema`. */
+  driverAppUuid: kapulaDriverAppUuidSchema.optional(),
   /**
    * Lets players pick "Real gamepad" instead of a touch layout: a controller
    * paired with the phone (USB or Bluetooth) is read through the Gamepad
@@ -547,19 +547,19 @@ const gamepadSessionConfigInputSchema = z.object({
    */
   disallowLayoutCustomization: z.boolean().default(false),
   /** Default 1; derived from the roster when one is given. */
-  minPlayers: z.number().int().min(1).max(GAMEPAD_MAX_PLAYERS_LIMIT).optional(),
+  minPlayers: z.number().int().min(1).max(KAPULA_MAX_PLAYERS_LIMIT).optional(),
   /** Default 8; derived from the roster when one is given. */
-  maxPlayers: z.number().int().min(1).max(GAMEPAD_MAX_PLAYERS_LIMIT).optional(),
+  maxPlayers: z.number().int().min(1).max(KAPULA_MAX_PLAYERS_LIMIT).optional(),
   schemas: z
     .array(controlSchemaSchema)
     .min(1)
-    .max(GAMEPAD_MAX_SCHEMAS)
+    .max(KAPULA_MAX_SCHEMAS)
     .default(() => [GENERIC_GAMEPAD_SCHEMA]),
   /**
-   * Colors players pick from; defaults to GAMEPAD_DEFAULT_COLORS. Colors are
+   * Colors players pick from; defaults to KAPULA_DEFAULT_COLORS. Colors are
    * unique per player, so the list must cover maxPlayers.
    */
-  colors: z.array(gamepadColorSchema).max(24).optional(),
+  colors: z.array(kapulaColorSchema).max(24).optional(),
   /**
    * Lets players join a game that is already running (`in_progress` or
    * `paused`) instead of only in the lobby. Default false — a game that
@@ -597,9 +597,9 @@ const gamepadSessionConfigInputSchema = z.object({
    * game can start only once every slot is filled, connected and ready.
    */
   roster: z
-    .array(gamepadRosterEntrySchema)
+    .array(kapulaRosterEntrySchema)
     .min(1)
-    .max(GAMEPAD_MAX_PLAYERS_LIMIT)
+    .max(KAPULA_MAX_PLAYERS_LIMIT)
     .optional(),
   /**
    * Opt-in behaviour the driver declares it supports, as free-form strings.
@@ -611,7 +611,7 @@ const gamepadSessionConfigInputSchema = z.object({
   capabilities: z.array(z.string().min(1).max(32)).max(16).default([]),
 });
 
-export const gamepadSessionConfigSchema = gamepadSessionConfigInputSchema
+export const kapulaSessionConfigSchema = kapulaSessionConfigInputSchema
   .transform((config, ctx) => {
     if (!config.roster) {
       return {
@@ -683,7 +683,7 @@ export const gamepadSessionConfigSchema = gamepadSessionConfigInputSchema
       }
     }
     if (config.roster) {
-      const palette: readonly string[] = config.colors ?? GAMEPAD_DEFAULT_COLORS;
+      const palette: readonly string[] = config.colors ?? KAPULA_DEFAULT_COLORS;
       const names = new Set<string>();
       const colors = new Set<string>();
       for (const entry of config.roster) {
@@ -714,11 +714,11 @@ export const gamepadSessionConfigSchema = gamepadSessionConfigInputSchema
       }
     }
   });
-export type GamepadSessionConfig = z.infer<typeof gamepadSessionConfigSchema>;
+export type KapulaSessionConfig = z.infer<typeof kapulaSessionConfigSchema>;
 
 export const getSessionColors = (
-  config: GamepadSessionConfig,
-): readonly string[] => config.colors ?? GAMEPAD_DEFAULT_COLORS;
+  config: KapulaSessionConfig,
+): readonly string[] => config.colors ?? KAPULA_DEFAULT_COLORS;
 
 /**
  * Whether a player may select this schema id: one of the driver's schemas,
@@ -726,7 +726,7 @@ export const getSessionColors = (
  * the server to gate `select_schema` and by the phone to render the picker.
  */
 export const isSelectableSchemaId = (
-  config: Pick<GamepadSessionConfig, "schemas" | "allowPhysicalGamepad">,
+  config: Pick<KapulaSessionConfig, "schemas" | "allowPhysicalGamepad">,
   schemaId: string,
 ): boolean =>
   config.schemas.some((schema) => schema.id === schemaId) ||
@@ -738,13 +738,13 @@ export const isSelectableSchemaId = (
  * capability the other has never heard of.
  */
 export const hasCapability = (
-  config: Pick<GamepadSessionConfig, "capabilities">,
+  config: Pick<KapulaSessionConfig, "capabilities">,
   name: string,
 ): boolean => config.capabilities.includes(name);
 
 /** Whether the player has more than one way to control the game to pick from. */
 export const hasSchemaChoice = (
-  config: Pick<GamepadSessionConfig, "schemas" | "allowPhysicalGamepad">,
+  config: Pick<KapulaSessionConfig, "schemas" | "allowPhysicalGamepad">,
 ): boolean => config.schemas.length > 1 || config.allowPhysicalGamepad;
 
 // --- Runtime session info ---
@@ -752,7 +752,7 @@ export const hasSchemaChoice = (
 // --- Background image (posted by the driver over HTTP) ---
 
 /** Largest background image a driver may post, in bytes. */
-export const GAMEPAD_BACKGROUND_MAX_BYTES = 2 * 1024 * 1024;
+export const KAPULA_BACKGROUND_MAX_BYTES = 2 * 1024 * 1024;
 
 /**
  * How the image fills the controller box: "cover" (default) fills it and
@@ -760,46 +760,46 @@ export const GAMEPAD_BACKGROUND_MAX_BYTES = 2 * 1024 * 1024;
  * stretches it to the box exactly — the one where image pixels line up with
  * `raw` touch coordinates whatever the phone's aspect ratio.
  */
-export const gamepadBackgroundFitSchema = z.enum(["cover", "contain", "fill"]);
-export type GamepadBackgroundFit = z.infer<typeof gamepadBackgroundFitSchema>;
+export const kapulaBackgroundFitSchema = z.enum(["cover", "contain", "fill"]);
+export type KapulaBackgroundFit = z.infer<typeof kapulaBackgroundFitSchema>;
 
 /**
  * The image the driver posted, as the phone shows it behind the controller.
  * `url` is a same-origin path that changes with every upload, so it can be
  * cached forever.
  */
-export const gamepadBackgroundSchema = z.object({
+export const kapulaBackgroundSchema = z.object({
   url: z.string(),
-  fit: gamepadBackgroundFitSchema,
+  fit: kapulaBackgroundFitSchema,
 });
-export type GamepadBackground = z.infer<typeof gamepadBackgroundSchema>;
+export type KapulaBackground = z.infer<typeof kapulaBackgroundSchema>;
 
-export const gamepadPlayerInfoSchema = z.object({
+export const kapulaPlayerInfoSchema = z.object({
   playerId: z.string(),
   name: z.string(),
-  color: gamepadColorSchema,
+  color: kapulaColorSchema,
   ready: z.boolean(),
   connected: z.boolean(),
   schemaId: z.string(),
 });
-export type GamepadPlayerInfo = z.infer<typeof gamepadPlayerInfoSchema>;
+export type KapulaPlayerInfo = z.infer<typeof kapulaPlayerInfoSchema>;
 
-export const gamepadSessionSnapshotSchema = z.object({
+export const kapulaSessionSnapshotSchema = z.object({
   /**
    * The protocol version this server speaks, so a driver that reconnects
    * without the setup response it once got still knows what it is talking to.
    */
   protocolVersion: z.number().int(),
   sessionId: z.string(),
-  state: gamepadSessionStateSchema,
-  config: gamepadSessionConfigSchema,
+  state: kapulaSessionStateSchema,
+  config: kapulaSessionConfigSchema,
   driverConnected: z.boolean(),
-  players: z.array(gamepadPlayerInfoSchema),
+  players: z.array(kapulaPlayerInfoSchema),
   /** The driver's background image; absent until one is posted. */
-  background: gamepadBackgroundSchema.optional(),
+  background: kapulaBackgroundSchema.optional(),
 });
-export type GamepadSessionSnapshot = z.infer<
-  typeof gamepadSessionSnapshotSchema
+export type KapulaSessionSnapshot = z.infer<
+  typeof kapulaSessionSnapshotSchema
 >;
 
 // --- Input ---
@@ -812,7 +812,7 @@ const axisSchema = z.number().finite().min(-1).max(1);
  * released center; "u"/"r"/"d"/"l" are up/right/down/left (screen directions,
  * y down); diagonals concatenate them ("ur" = up-right, …).
  */
-export const GAMEPAD_DPAD_DIRECTIONS = [
+export const KAPULA_DPAD_DIRECTIONS = [
   "c",
   "u",
   "ur",
@@ -823,8 +823,8 @@ export const GAMEPAD_DPAD_DIRECTIONS = [
   "l",
   "ul",
 ] as const;
-export const gamepadDpadDirectionSchema = z.enum(GAMEPAD_DPAD_DIRECTIONS);
-export type GamepadDpadDirection = z.infer<typeof gamepadDpadDirectionSchema>;
+export const kapulaDpadDirectionSchema = z.enum(KAPULA_DPAD_DIRECTIONS);
+export type KapulaDpadDirection = z.infer<typeof kapulaDpadDirectionSchema>;
 
 const DIAGONAL = Math.SQRT1_2;
 
@@ -833,7 +833,7 @@ const DIAGONAL = Math.SQRT1_2;
  * coordinates (y positive downwards, diagonals normalized to length 1).
  */
 export const dpadToVector = (
-  direction: GamepadDpadDirection,
+  direction: KapulaDpadDirection,
 ): { x: number; y: number } => {
   switch (direction) {
     case "u":
@@ -866,12 +866,12 @@ export const dpadToVector = (
  * the sticks), rounded to 3 decimals. A finger dragged past the edge is
  * clamped to it and keeps reporting until it lifts.
  */
-export const gamepadRawTouchSchema = z.object({
-  id: z.number().int().min(0).max(GAMEPAD_RAW_MAX_TOUCHES - 1),
+export const kapulaRawTouchSchema = z.object({
+  id: z.number().int().min(0).max(KAPULA_RAW_MAX_TOUCHES - 1),
   x: z.number().finite().min(0).max(1),
   y: z.number().finite().min(0).max(1),
 });
-export type GamepadRawTouch = z.infer<typeof gamepadRawTouchSchema>;
+export type KapulaRawTouch = z.infer<typeof kapulaRawTouchSchema>;
 
 /**
  * Buttons are booleans; joysticks report by mode — full: `{x, y}`,
@@ -881,18 +881,18 @@ export type GamepadRawTouch = z.infer<typeof gamepadRawTouchSchema>;
  * An array is a `raw` or `touchpad` control's fingers (empty when nothing
  * touches).
  */
-export const gamepadInputValueSchema = z.union([
+export const kapulaInputValueSchema = z.union([
   z.boolean(),
   z.object({ x: axisSchema, y: axisSchema }),
   // Strict, so a full frame with one bad axis can't sneak through as a
   // single-axis value with the other axis stripped.
   z.strictObject({ x: axisSchema }),
   z.strictObject({ y: axisSchema }),
-  gamepadDpadDirectionSchema,
+  kapulaDpadDirectionSchema,
   axisSchema,
-  z.array(gamepadRawTouchSchema).max(GAMEPAD_RAW_MAX_TOUCHES),
+  z.array(kapulaRawTouchSchema).max(KAPULA_RAW_MAX_TOUCHES),
 ]);
-export type GamepadInputValue = z.infer<typeof gamepadInputValueSchema>;
+export type KapulaInputValue = z.infer<typeof kapulaInputValueSchema>;
 
 /**
  * Full controller state, sent whenever it changes (throttled; button edges
@@ -903,31 +903,31 @@ export type GamepadInputValue = z.infer<typeof gamepadInputValueSchema>;
  * (seeded from wall-clock milliseconds at page load, +1 per frame); the
  * server relays it as is and drops non-increasing frames. Expect gaps.
  */
-export const gamepadInputFrameSchema = z.object({
+export const kapulaInputFrameSchema = z.object({
   seq: z.number().int().nonnegative(),
-  controls: z.record(idSchema, gamepadInputValueSchema),
+  controls: z.record(idSchema, kapulaInputValueSchema),
 });
-export type GamepadInputFrame = z.infer<typeof gamepadInputFrameSchema>;
+export type KapulaInputFrame = z.infer<typeof kapulaInputFrameSchema>;
 
 // --- Motion stream (schemas with a `motion` control) ---
 
 /** Largest accelerations / angular rates a phone IMU reports; beyond is garbage. */
-export const GAMEPAD_MOTION_ACCEL_MAX_G = 32;
-export const GAMEPAD_MOTION_RATE_MAX_DPS = 8000;
+export const KAPULA_MOTION_ACCEL_MAX_G = 32;
+export const KAPULA_MOTION_RATE_MAX_DPS = 8000;
 
 /** Samples per `motion` message; the phone batches a few sensor events. */
-export const GAMEPAD_MOTION_BATCH_MAX = 16;
+export const KAPULA_MOTION_BATCH_MAX = 16;
 
 const accelSchema = z
   .number()
   .finite()
-  .min(-GAMEPAD_MOTION_ACCEL_MAX_G)
-  .max(GAMEPAD_MOTION_ACCEL_MAX_G);
+  .min(-KAPULA_MOTION_ACCEL_MAX_G)
+  .max(KAPULA_MOTION_ACCEL_MAX_G);
 const rateSchema = z
   .number()
   .finite()
-  .min(-GAMEPAD_MOTION_RATE_MAX_DPS)
-  .max(GAMEPAD_MOTION_RATE_MAX_DPS);
+  .min(-KAPULA_MOTION_RATE_MAX_DPS)
+  .max(KAPULA_MOTION_RATE_MAX_DPS);
 
 /**
  * One raw IMU reading, as a compact tuple `[t, ax, ay, az, gx, gy, gz]`:
@@ -948,7 +948,7 @@ const rateSchema = z
  * declare — the Wii Remote hold is portrait, top edge toward the TV, screen
  * up, so the remote's forward is +y, its up is +z, its right is +x.
  */
-export const gamepadMotionSampleSchema = z.tuple([
+export const kapulaMotionSampleSchema = z.tuple([
   z.number().finite().nonnegative(),
   accelSchema,
   accelSchema,
@@ -957,34 +957,34 @@ export const gamepadMotionSampleSchema = z.tuple([
   rateSchema,
   rateSchema,
 ]);
-export type GamepadMotionSample = z.infer<typeof gamepadMotionSampleSchema>;
+export type KapulaMotionSample = z.infer<typeof kapulaMotionSampleSchema>;
 
 const motionSamplesSchema = z
-  .array(gamepadMotionSampleSchema)
+  .array(kapulaMotionSampleSchema)
   .min(1)
-  .max(GAMEPAD_MOTION_BATCH_MAX);
+  .max(KAPULA_MOTION_BATCH_MAX);
 
 // --- WebSocket messages: client → server ---
 
-export const gamepadPlayerClientMessageSchema = z.discriminatedUnion("type", [
+export const kapulaPlayerClientMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("ping") }),
   z.object({ type: z.literal("set_ready"), ready: z.boolean() }),
   z.object({ type: z.literal("select_schema"), schemaId: idSchema }),
   /** Lobby-only: change the auto-assigned name and/or color. */
   z.object({
     type: z.literal("update_profile"),
-    name: gamepadPlayerNameSchema.optional(),
-    color: gamepadColorSchema.optional(),
+    name: kapulaPlayerNameSchema.optional(),
+    color: kapulaColorSchema.optional(),
   }),
   /**
    * Full controller state. `seq` is phone-owned and strictly increasing for
-   * the player's lifetime (see gamepadInputFrameSchema); the server drops a
+   * the player's lifetime (see kapulaInputFrameSchema); the server drops a
    * frame whose seq does not exceed the last one it relayed for the player.
    */
   z.object({
     type: z.literal("input"),
     seq: z.number().int().nonnegative(),
-    controls: z.record(idSchema, gamepadInputValueSchema),
+    controls: z.record(idSchema, kapulaInputValueSchema),
   }),
   /**
    * Raw IMU samples from a schema's `motion` control, oldest first. A stream,
@@ -1000,7 +1000,7 @@ export const gamepadPlayerClientMessageSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("text"),
     controlId: idSchema,
-    text: z.string().max(GAMEPAD_TEXT_MAX_LENGTH),
+    text: z.string().max(KAPULA_TEXT_MAX_LENGTH),
   }),
   /**
    * Leave the session for good: frees the name/color slot, invalidates the
@@ -1009,11 +1009,11 @@ export const gamepadPlayerClientMessageSchema = z.discriminatedUnion("type", [
    */
   z.object({ type: z.literal("leave") }),
 ]);
-export type GamepadPlayerClientMessage = z.infer<
-  typeof gamepadPlayerClientMessageSchema
+export type KapulaPlayerClientMessage = z.infer<
+  typeof kapulaPlayerClientMessageSchema
 >;
 
-export const gamepadDriverClientMessageSchema = z.discriminatedUnion("type", [
+export const kapulaDriverClientMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("ping") }),
   z.object({ type: z.literal("start") }),
   z.object({ type: z.literal("pause") }),
@@ -1056,22 +1056,22 @@ export const gamepadDriverClientMessageSchema = z.discriminatedUnion("type", [
     schemaId: z.string(),
   }),
 ]);
-export type GamepadDriverClientMessage = z.infer<
-  typeof gamepadDriverClientMessageSchema
+export type KapulaDriverClientMessage = z.infer<
+  typeof kapulaDriverClientMessageSchema
 >;
 
 // --- WebSocket messages: server → client ---
 
-export const gamepadStateChangeReasonSchema = z.enum([
+export const kapulaStateChangeReasonSchema = z.enum([
   "driver_command",
   "driver_disconnected",
-  /** The driver stayed away for GAMEPAD_DRIVER_LOST_TIMEOUT_MS; session ended. */
+  /** The driver stayed away for KAPULA_DRIVER_LOST_TIMEOUT_MS; session ended. */
   "driver_lost",
   "host_ended",
   "inactivity",
 ]);
-export type GamepadStateChangeReason = z.infer<
-  typeof gamepadStateChangeReasonSchema
+export type KapulaStateChangeReason = z.infer<
+  typeof kapulaStateChangeReasonSchema
 >;
 
 /**
@@ -1081,7 +1081,7 @@ export type GamepadStateChangeReason = z.infer<
  * additive change under the version 1 policy), so treat an unknown code as a
  * generic error and show `message` rather than failing.
  */
-export const gamepadErrorCodeSchema = z.enum([
+export const kapulaErrorCodeSchema = z.enum([
   /** The action is not allowed in the session's current state. */
   "invalid_state",
   /** `start` refused: not everyone is joined, connected and ready. */
@@ -1095,24 +1095,24 @@ export const gamepadErrorCodeSchema = z.enum([
   /** No such player in this session (driver-addressed messages). */
   "unknown_player",
 ]);
-export type GamepadErrorCode = z.infer<typeof gamepadErrorCodeSchema>;
+export type KapulaErrorCode = z.infer<typeof kapulaErrorCodeSchema>;
 
-export const gamepadServerMessageSchema = z.discriminatedUnion("type", [
+export const kapulaServerMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("pong") }),
   /** First message after connecting; `playerId` set for the player role. */
   z.object({
     type: z.literal("snapshot"),
-    snapshot: gamepadSessionSnapshotSchema,
+    snapshot: kapulaSessionSnapshotSchema,
     playerId: z.string().optional(),
   }),
-  /** Every state change states why; see gamepadStateChangeReasonSchema. */
+  /** Every state change states why; see kapulaStateChangeReasonSchema. */
   z.object({
     type: z.literal("state_changed"),
-    state: gamepadSessionStateSchema,
-    reason: gamepadStateChangeReasonSchema,
+    state: kapulaSessionStateSchema,
+    reason: kapulaStateChangeReasonSchema,
   }),
-  z.object({ type: z.literal("player_joined"), player: gamepadPlayerInfoSchema }),
-  z.object({ type: z.literal("player_updated"), player: gamepadPlayerInfoSchema }),
+  z.object({ type: z.literal("player_joined"), player: kapulaPlayerInfoSchema }),
+  z.object({ type: z.literal("player_updated"), player: kapulaPlayerInfoSchema }),
   z.object({ type: z.literal("player_connected"), playerId: z.string() }),
   z.object({ type: z.literal("player_disconnected"), playerId: z.string() }),
   /** The player left for good; the slot (name + color) is free again. */
@@ -1128,7 +1128,7 @@ export const gamepadServerMessageSchema = z.discriminatedUnion("type", [
     type: z.literal("input"),
     playerId: z.string(),
     seq: z.number().int().nonnegative(),
-    controls: z.record(idSchema, gamepadInputValueSchema),
+    controls: z.record(idSchema, kapulaInputValueSchema),
   }),
   /** Driver only: relayed raw IMU samples (schemas with a `motion` control). */
   z.object({
@@ -1141,7 +1141,7 @@ export const gamepadServerMessageSchema = z.discriminatedUnion("type", [
     type: z.literal("text"),
     playerId: z.string(),
     controlId: idSchema,
-    text: z.string().max(GAMEPAD_TEXT_MAX_LENGTH),
+    text: z.string().max(KAPULA_TEXT_MAX_LENGTH),
   }),
   /** Player only: payload from the driver; absent when the driver sent none. */
   z.object({ type: z.literal("message"), payload: z.unknown().optional() }),
@@ -1151,7 +1151,7 @@ export const gamepadServerMessageSchema = z.discriminatedUnion("type", [
    */
   z.object({
     type: z.literal("background_changed"),
-    background: gamepadBackgroundSchema.nullable(),
+    background: kapulaBackgroundSchema.nullable(),
   }),
   /**
    * The last action was refused. `code` is for branching, `message` is
@@ -1159,34 +1159,34 @@ export const gamepadServerMessageSchema = z.discriminatedUnion("type", [
    */
   z.object({
     type: z.literal("error"),
-    code: gamepadErrorCodeSchema,
+    code: kapulaErrorCodeSchema,
     message: z.string(),
   }),
 ]);
-export type GamepadServerMessage = z.infer<typeof gamepadServerMessageSchema>;
+export type KapulaServerMessage = z.infer<typeof kapulaServerMessageSchema>;
 
 // --- Driver HTTP API ---
 
 /** Human-typeable codes: no 0/O/1/I/L lookalikes. */
-export const GAMEPAD_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-export const GAMEPAD_CODE_LENGTH = 6;
+export const KAPULA_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+export const KAPULA_CODE_LENGTH = 6;
 
-export const gamepadCodeSchema = z
+export const kapulaCodeSchema = z
   .string()
   .trim()
   .toUpperCase()
   .pipe(
     z
       .string()
-      .length(GAMEPAD_CODE_LENGTH)
-      .regex(new RegExp(`^[${GAMEPAD_CODE_ALPHABET}]+$`), "Invalid code"),
+      .length(KAPULA_CODE_LENGTH)
+      .regex(new RegExp(`^[${KAPULA_CODE_ALPHABET}]+$`), "Invalid code"),
   );
 
-export const gamepadDriverSetupRequestSchema = z.object({
-  setupCode: gamepadCodeSchema,
+export const kapulaDriverSetupRequestSchema = z.object({
+  setupCode: kapulaCodeSchema,
   /** Omitted config sets up a single generic gamepad schema. */
-  config: gamepadSessionConfigSchema.default(() =>
-    gamepadSessionConfigSchema.parse({}),
+  config: kapulaSessionConfigSchema.default(() =>
+    kapulaSessionConfigSchema.parse({}),
   ),
   /**
    * The protocol version the driver wants to speak. Omitted means "whatever
@@ -1197,8 +1197,8 @@ export const gamepadDriverSetupRequestSchema = z.object({
    */
   protocolVersion: z.number().int().positive().optional(),
 });
-export type GamepadDriverSetupRequest = z.infer<
-  typeof gamepadDriverSetupRequestSchema
+export type KapulaDriverSetupRequest = z.infer<
+  typeof kapulaDriverSetupRequestSchema
 >;
 
 /**
@@ -1207,9 +1207,9 @@ export type GamepadDriverSetupRequest = z.infer<
  * authenticates with its owner's driver key (`Authorization: Bearer gpk_…`)
  * and the session is created for it. The response is a setup response.
  */
-export const gamepadDriverCreateRequestSchema = z.object({
-  config: gamepadSessionConfigSchema.default(() =>
-    gamepadSessionConfigSchema.parse({}),
+export const kapulaDriverCreateRequestSchema = z.object({
+  config: kapulaSessionConfigSchema.default(() =>
+    kapulaSessionConfigSchema.parse({}),
   ),
   protocolVersion: z.number().int().positive().optional(),
   /**
@@ -1220,11 +1220,11 @@ export const gamepadDriverCreateRequestSchema = z.object({
    */
   replaceExisting: z.boolean().default(false),
 });
-export type GamepadDriverCreateRequest = z.infer<
-  typeof gamepadDriverCreateRequestSchema
+export type KapulaDriverCreateRequest = z.infer<
+  typeof kapulaDriverCreateRequestSchema
 >;
 
-export type GamepadDriverSetupResponse = {
+export type KapulaDriverSetupResponse = {
   /** The version the session speaks; equals the request's when it asked. */
   protocolVersion: number;
   sessionId: string;
@@ -1241,7 +1241,7 @@ export type GamepadDriverSetupResponse = {
   metadata?: string;
 };
 
-// --- Player HTTP API (the phone's join surface; see GAMEPAD.md "Player HTTP API") ---
+// --- Player HTTP API (the phone's join surface; see KAPULA.md "Player HTTP API") ---
 
 /**
  * `POST {basePath}/join` — joining takes the code; the server assigns a free
@@ -1249,27 +1249,27 @@ export type GamepadDriverSetupResponse = {
  * the lobby. In a roster session `name` picks the predefined slot instead
  * (required there; the slot fixes name and color).
  */
-export const gamepadJoinRequestSchema = z.object({
-  joinCode: gamepadCodeSchema,
-  name: gamepadPlayerNameSchema.optional(),
+export const kapulaJoinRequestSchema = z.object({
+  joinCode: kapulaCodeSchema,
+  name: kapulaPlayerNameSchema.optional(),
 });
-export type GamepadJoinRequest = z.infer<typeof gamepadJoinRequestSchema>;
+export type KapulaJoinRequest = z.infer<typeof kapulaJoinRequestSchema>;
 
 /** What a successful join hands the phone; the token is its credential. */
-export const gamepadJoinResultSchema = z.object({
+export const kapulaJoinResultSchema = z.object({
   sessionId: z.string(),
   playerId: z.string(),
   playerToken: z.string(),
 });
-export type GamepadJoinResult = z.infer<typeof gamepadJoinResultSchema>;
+export type KapulaJoinResult = z.infer<typeof kapulaJoinResultSchema>;
 
 /**
  * `GET {basePath}/join-info/:joinCode` — everything the join screen needs
  * before joining; never exposes tokens. Null for a code that leads nowhere
  * (unknown, ended, or a private session, which the code never confirms).
  */
-export const gamepadJoinInfoSchema = z.object({
-  state: gamepadSessionStateSchema,
+export const kapulaJoinInfoSchema = z.object({
+  state: kapulaSessionStateSchema,
   game: z.string().nullable(),
   maxPlayers: z.number().int(),
   playerCount: z.number().int(),
@@ -1279,25 +1279,25 @@ export const gamepadJoinInfoSchema = z.object({
    * reads this instead of comparing the state itself.
    */
   acceptingPlayers: z.boolean(),
-  availableColors: z.array(gamepadColorSchema),
+  availableColors: z.array(kapulaColorSchema),
   schemas: z.array(z.object({ id: z.string(), name: z.string() })),
   /** Driver-predefined slots to pick from; null in a free-join session. */
   roster: z
-    .array(z.object({ name: z.string(), color: gamepadColorSchema, taken: z.boolean() }))
+    .array(z.object({ name: z.string(), color: kapulaColorSchema, taken: z.boolean() }))
     .nullable(),
 });
-export type GamepadJoinInfo = z.infer<typeof gamepadJoinInfoSchema>;
+export type KapulaJoinInfo = z.infer<typeof kapulaJoinInfoSchema>;
 
 /** `POST {basePath}/player/status` — does a stored player credential still lead somewhere? */
-export const gamepadPlayerStatusRequestSchema = z.object({
+export const kapulaPlayerStatusRequestSchema = z.object({
   token: z.string().min(1).max(128),
 });
 
-export const gamepadPlayerStatusSchema = z.object({
+export const kapulaPlayerStatusSchema = z.object({
   sessionId: z.string(),
-  state: gamepadSessionStateSchema,
+  state: kapulaSessionStateSchema,
   game: z.string().nullable(),
   name: z.string(),
-  color: gamepadColorSchema,
+  color: kapulaColorSchema,
 });
-export type GamepadPlayerStatus = z.infer<typeof gamepadPlayerStatusSchema>;
+export type KapulaPlayerStatus = z.infer<typeof kapulaPlayerStatusSchema>;

@@ -3,7 +3,7 @@ import "./kapula.css";
 
 /**
  * Where the player screens find their server. The phone UI is mounted by a
- * host page — the monorepo's gamepad app today, a desktop app's built-in
+ * host page — the monorepo's Kapula app today, a desktop app's built-in
  * server later — and the host says where the Kapula HTTP API lives; the
  * screens derive every URL from that. Nothing in this folder may hardcode a
  * path or import from the host (tests/unit/gamepad-player-boundary.spec.ts
@@ -45,7 +45,7 @@ export const useKapulaConfig = (): KapulaPlayerConfig => useContext(ConfigContex
  * The session WebSocket under the API base, ws(s) matching http(s). Resolved
  * against the page so a relative `apiBase` works wherever the page is served.
  */
-export const buildGamepadWsUrl = (
+export const buildKapulaWsUrl = (
   apiBase: string,
   params: Record<string, string>,
 ): string => {

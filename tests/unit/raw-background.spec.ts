@@ -1,15 +1,15 @@
 import { test, expect } from "@playwright/test";
 import {
-  GAMEPAD_PROTOCOL_VERSION,
-  GAMEPAD_RAW_MAX_TOUCHES,
+  KAPULA_PROTOCOL_VERSION,
+  KAPULA_RAW_MAX_TOUCHES,
   controlSchemaSchema,
-  gamepadInputFrameSchema,
-  gamepadServerMessageSchema,
-  gamepadSessionConfigSchema,
-  gamepadSessionSnapshotSchema,
+  kapulaInputFrameSchema,
+  kapulaServerMessageSchema,
+  kapulaSessionConfigSchema,
+  kapulaSessionSnapshotSchema,
   getRawControl,
 } from "@kapula/protocol";
-import type { GamepadSessionSnapshot } from "@kapula/protocol";
+import type { KapulaSessionSnapshot } from "@kapula/protocol";
 import { sniffImageType } from "@kapula/server";
 import {
   canCustomizeLayout,
@@ -80,7 +80,7 @@ test.describe("raw control schema", () => {
       ],
     });
     expect(resolveLayout(schema, { width: 800, height: 400 }).controls).toEqual([]);
-    const config = gamepadSessionConfigSchema.parse({ schemas: [schema] });
+    const config = kapulaSessionConfigSchema.parse({ schemas: [schema] });
     expect(canCustomizeLayout(config, schema)).toBe(false);
     // With something laid out on top, that something is editable.
     const withButton = controlSchemaSchema.parse({
@@ -93,7 +93,7 @@ test.describe("raw control schema", () => {
         (c) => c.control.id,
       ),
     ).toEqual(["a"]);
-    const plain = gamepadSessionConfigSchema.parse({});
+    const plain = kapulaSessionConfigSchema.parse({});
     expect(canCustomizeLayout(plain, plain.schemas[0])).toBe(true);
     expect(
       canCustomizeLayout(
@@ -139,7 +139,7 @@ test.describe("touchpad and button shape schema", () => {
 
 test.describe("raw touch input", () => {
   const frame = (touch: unknown) =>
-    gamepadInputFrameSchema.safeParse({ seq: 1, controls: { touch } });
+    kapulaInputFrameSchema.safeParse({ seq: 1, controls: { touch } });
 
   test("a list of fingers, empty included, is a valid value", () => {
     expect(frame([]).success).toBe(true);
@@ -155,10 +155,10 @@ test.describe("raw touch input", () => {
     expect(frame([{ id: 0, x: 1.2, y: 0.5 }]).success).toBe(false);
     expect(frame([{ id: 0, x: 0.5, y: -0.1 }]).success).toBe(false);
     expect(frame([{ id: -1, x: 0.5, y: 0.5 }]).success).toBe(false);
-    expect(frame([{ id: GAMEPAD_RAW_MAX_TOUCHES, x: 0.5, y: 0.5 }]).success).toBe(false);
+    expect(frame([{ id: KAPULA_RAW_MAX_TOUCHES, x: 0.5, y: 0.5 }]).success).toBe(false);
     expect(frame([{ id: 0.5, x: 0.5, y: 0.5 }]).success).toBe(false);
-    const tooMany = Array.from({ length: GAMEPAD_RAW_MAX_TOUCHES + 1 }, (_, id) => ({
-      id: id % GAMEPAD_RAW_MAX_TOUCHES,
+    const tooMany = Array.from({ length: KAPULA_RAW_MAX_TOUCHES + 1 }, (_, id) => ({
+      id: id % KAPULA_RAW_MAX_TOUCHES,
       x: 0,
       y: 0,
     }));
@@ -170,7 +170,7 @@ test.describe("raw touch input", () => {
     expect(allocateTouchSlot([0, 1])).toBe(2);
     expect(allocateTouchSlot([0, 2])).toBe(1);
     expect(
-      allocateTouchSlot(Array.from({ length: GAMEPAD_RAW_MAX_TOUCHES }, (_, i) => i)),
+      allocateTouchSlot(Array.from({ length: KAPULA_RAW_MAX_TOUCHES }, (_, i) => i)),
     ).toBeNull();
   });
 
@@ -198,23 +198,23 @@ test.describe("raw touch input", () => {
 });
 
 test.describe("background image", () => {
-  const snapshot: GamepadSessionSnapshot = {
-    protocolVersion: GAMEPAD_PROTOCOL_VERSION,
+  const snapshot: KapulaSessionSnapshot = {
+    protocolVersion: KAPULA_PROTOCOL_VERSION,
     sessionId: "s1",
     state: "in_progress",
-    config: gamepadSessionConfigSchema.parse({}),
+    config: kapulaSessionConfigSchema.parse({}),
     driverConnected: true,
     players: [],
   };
   const background = { url: "/api/gamepad/background/abc", fit: "cover" as const };
 
   test("snapshots parse with and without one", () => {
-    expect(gamepadSessionSnapshotSchema.safeParse(snapshot).success).toBe(true);
+    expect(kapulaSessionSnapshotSchema.safeParse(snapshot).success).toBe(true);
     expect(
-      gamepadSessionSnapshotSchema.safeParse({ ...snapshot, background }).success,
+      kapulaSessionSnapshotSchema.safeParse({ ...snapshot, background }).success,
     ).toBe(true);
     expect(
-      gamepadSessionSnapshotSchema.safeParse({
+      kapulaSessionSnapshotSchema.safeParse({
         ...snapshot,
         background: { ...background, fit: "tile" },
       }).success,
@@ -222,7 +222,7 @@ test.describe("background image", () => {
   });
 
   test("background_changed sets and clears it on the phone's snapshot", () => {
-    const set = gamepadServerMessageSchema.parse({
+    const set = kapulaServerMessageSchema.parse({
       type: "background_changed",
       background,
     });
@@ -231,7 +231,7 @@ test.describe("background image", () => {
 
     const cleared = applyServerMessage(
       withBackground,
-      gamepadServerMessageSchema.parse({ type: "background_changed", background: null }),
+      kapulaServerMessageSchema.parse({ type: "background_changed", background: null }),
     );
     expect(cleared).not.toHaveProperty("background");
   });

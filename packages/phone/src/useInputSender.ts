@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import type { GamepadInputValue, GamepadPlayerClientMessage } from "@kapula/protocol";
+import type { KapulaInputValue, KapulaPlayerClientMessage } from "@kapula/protocol";
 import { createSeqCounter, type SeqCounter } from "./seq-counter.js";
 
 /** Joystick movement is coalesced to ~30 frames/s; button edges flush now. */
@@ -23,12 +23,12 @@ export const POINTER_THROTTLE_MS = 16;
  * get a private one.
  */
 export const useInputSender = (
-  send: (msg: GamepadPlayerClientMessage) => void,
+  send: (msg: KapulaPlayerClientMessage) => void,
   enabled: boolean,
   seq?: SeqCounter,
   throttleMs = THROTTLE_MS,
 ) => {
-  const controlsRef = useRef<Record<string, GamepadInputValue>>({});
+  const controlsRef = useRef<Record<string, KapulaInputValue>>({});
   const ownSeqRef = useRef<SeqCounter | null>(null);
   const counter = seq ?? (ownSeqRef.current ??= createSeqCounter());
   const seqRef = useRef(counter);
@@ -57,7 +57,7 @@ export const useInputSender = (
   }, []);
 
   const setControl = useCallback(
-    (id: string, value: GamepadInputValue, immediate: boolean) => {
+    (id: string, value: KapulaInputValue, immediate: boolean) => {
       controlsRef.current[id] = value;
       if (immediate) {
         flush();

@@ -25,6 +25,6 @@ export const readConfig = (env: NodeJS.ProcessEnv): HostConfig => ({
   devAuth: env.KAPULA_DEV_AUTH === "1",
   ownerToken: env.KAPULA_OWNER_TOKEN || null,
   ownerEmail: (env.KAPULA_OWNER_EMAIL || "owner@localhost").toLowerCase(),
-  driverLostTimeoutMs: positive(env.GAMEPAD_DRIVER_LOST_TIMEOUT_MS),
-  keepaliveIntervalMs: positive(env.GAMEPAD_WS_KEEPALIVE_MS),
+  driverLostTimeoutMs: positive(env.KAPULA_DRIVER_LOST_TIMEOUT_MS),
+  keepaliveIntervalMs: positive(env.KAPULA_WS_KEEPALIVE_MS),
 });

@@ -3,8 +3,8 @@ import { flushSync } from "react-dom";
 import {
   getRawControl,
   type ControlSchema,
-  type GamepadBackground,
-  type GamepadPlayerClientMessage,
+  type KapulaBackground,
+  type KapulaPlayerClientMessage,
 } from "@kapula/protocol";
 import { ControlWidget } from "./ControlWidget.js";
 import { applyLayoutOverride, type LayoutOverride } from "./layout-override.js";
@@ -24,7 +24,7 @@ import { useWakeLock } from "./useWakeLock.js";
 
 type ControllerProps = {
   schema: ControlSchema;
-  send: (msg: GamepadPlayerClientMessage) => void;
+  send: (msg: KapulaPlayerClientMessage) => void;
   /** Paused sessions render the controller inert under an overlay. */
   disabled: boolean;
   /** The help-page demo renders live without holding a screen wake lock. */
@@ -34,7 +34,7 @@ type ControllerProps = {
   /** The player session's input seq counter; see seq-counter.ts. */
   seq?: SeqCounter;
   /** The driver's background image, drawn behind the controls. */
-  background?: GamepadBackground;
+  background?: KapulaBackground;
 };
 
 /**
@@ -224,7 +224,7 @@ export const Controller = ({
  * pixels up with touch positions exactly.
  */
 const backgroundStyle = (
-  background: GamepadBackground | undefined,
+  background: KapulaBackground | undefined,
 ): React.CSSProperties =>
   background
     ? {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { GamepadInputValue } from "@kapula/protocol";
+import type { KapulaInputValue } from "@kapula/protocol";
 import {
   diffPhysicalControls,
   IDLE_PHYSICAL_GAMEPAD,
@@ -17,7 +17,7 @@ export type PhysicalGamepadStatus = {
   /** Whether the controller reports the W3C "standard" button layout. */
   standardMapping: boolean;
   /** Latest mapped state, for the on-screen preview. */
-  controls: Record<string, GamepadInputValue>;
+  controls: Record<string, KapulaInputValue>;
 };
 
 /** Gamepad API present in this browser (the picker gates on it too). */
@@ -80,7 +80,7 @@ export const rumblePhysicalGamepad = (durationMs: number): void => {
 export const usePhysicalGamepad = (params: {
   /** False while input must not be sent (menu open, paused, trial). */
   enabled: boolean;
-  setControl: (id: string, value: GamepadInputValue, immediate: boolean) => void;
+  setControl: (id: string, value: KapulaInputValue, immediate: boolean) => void;
 }): PhysicalGamepadStatus => {
   const { enabled, setControl } = params;
   const supported = isPhysicalGamepadSupported();
@@ -103,9 +103,9 @@ export const usePhysicalGamepad = (params: {
     // the first poll: the sender may still hold what an earlier run of this
     // effect left there (a button held when the menu opened), so the first
     // push writes every control — as one coalesced frame, not 16 edges.
-    let sent: Record<string, GamepadInputValue> | null = null;
+    let sent: Record<string, KapulaInputValue> | null = null;
 
-    const push = (next: Record<string, GamepadInputValue>) => {
+    const push = (next: Record<string, KapulaInputValue>) => {
       const first = sent === null;
       const changed = diffPhysicalControls(sent ?? {}, next);
       // Movement first, so a press and the stick it rode in on share a frame.

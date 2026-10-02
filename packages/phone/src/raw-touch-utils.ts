@@ -1,4 +1,4 @@
-import { GAMEPAD_RAW_MAX_TOUCHES, type GamepadRawTouch } from "@kapula/protocol";
+import { KAPULA_RAW_MAX_TOUCHES, type KapulaRawTouch } from "@kapula/protocol";
 import { AXIS_DECIMALS } from "./axis-utils.js";
 
 /**
@@ -13,7 +13,7 @@ import { AXIS_DECIMALS } from "./axis-utils.js";
  */
 export const allocateTouchSlot = (taken: Iterable<number>): number | null => {
   const used = new Set(taken);
-  for (let id = 0; id < GAMEPAD_RAW_MAX_TOUCHES; id++) {
+  for (let id = 0; id < KAPULA_RAW_MAX_TOUCHES; id++) {
     if (!used.has(id)) return id;
   }
   return null;
@@ -42,8 +42,8 @@ export const touchPosition = (
 
 /** The wire value: every finger down, in slot order. */
 export const touchesValue = (
-  touches: Iterable<GamepadRawTouch>,
-): GamepadRawTouch[] =>
+  touches: Iterable<KapulaRawTouch>,
+): KapulaRawTouch[] =>
   [...touches]
     .map(({ id, x, y }) => ({ id, x, y }))
     .sort((a, b) => a.id - b.id);

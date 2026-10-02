@@ -1,6 +1,6 @@
 import type { APIRequestContext } from "@playwright/test";
 import { WebSocket } from "ws";
-import { gamepadServerMessageSchema } from "@kapula/protocol";
+import { kapulaServerMessageSchema } from "@kapula/protocol";
 import { HOST_URL } from "../../playwright.config";
 
 export type ServerMessage = { type: string } & Record<string, unknown>;
@@ -11,7 +11,7 @@ export const sleep = (ms: number) =>
 
 /**
  * Every WsClient opened during a spec run; used by the final contract test to
- * assert that no server message ever failed gamepadServerMessageSchema.
+ * assert that no server message ever failed kapulaServerMessageSchema.
  */
 export const allClients: WsClient[] = [];
 
@@ -23,7 +23,7 @@ export const allClients: WsClient[] = [];
 export class WsClient {
   readonly label: string;
   readonly messages: ServerMessage[] = [];
-  /** Frames the server sent that do not match gamepadServerMessageSchema. */
+  /** Frames the server sent that do not match kapulaServerMessageSchema. */
   readonly invalidMessages: unknown[] = [];
   closeEvent: CloseEvent | null = null;
   private ws: WebSocket;
@@ -73,7 +73,7 @@ export class WsClient {
         client.invalidMessages.push(String(data));
         return;
       }
-      if (!gamepadServerMessageSchema.safeParse(msg).success) {
+      if (!kapulaServerMessageSchema.safeParse(msg).success) {
         client.invalidMessages.push(msg);
       }
       const index = client.messages.length;

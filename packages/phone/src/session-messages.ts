@@ -1,6 +1,6 @@
 import {
-  GAMEPAD_DRIVER_LOST_TIMEOUT_MS,
-  type GamepadStateChangeReason,
+  KAPULA_DRIVER_LOST_TIMEOUT_MS,
+  type KapulaStateChangeReason,
 } from "@kapula/protocol";
 
 /**
@@ -11,7 +11,7 @@ import {
  */
 
 export const DRIVER_LOST_MINUTES = Math.round(
-  GAMEPAD_DRIVER_LOST_TIMEOUT_MS / 60_000,
+  KAPULA_DRIVER_LOST_TIMEOUT_MS / 60_000,
 );
 
 /**
@@ -21,7 +21,7 @@ export const DRIVER_LOST_MINUTES = Math.round(
  * away and the reason is unknown.
  */
 export const sessionGoneMessage = (
-  reason: GamepadStateChangeReason | null,
+  reason: KapulaStateChangeReason | null,
   closeCode: number | null,
 ): string => {
   // A kick closes the socket while the session runs on, so there is no
@@ -50,7 +50,7 @@ export const DRIVER_AWAY_NOTICE = `The game lost its connection. If it doesn't c
 
 /** One line for the host about why the session they were watching is gone. */
 export const sessionEndedNote = (
-  reason: GamepadStateChangeReason | null,
+  reason: KapulaStateChangeReason | null,
 ): string => {
   switch (reason) {
     case "driver_lost":

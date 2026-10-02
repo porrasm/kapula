@@ -1,14 +1,14 @@
 import crypto from "crypto";
 import {
-  GAMEPAD_CODE_ALPHABET,
-  GAMEPAD_CODE_LENGTH,
-  GAMEPAD_PLAYER_NAME_MAX_LENGTH,
-  gamepadPlayerNameSchema,
+  KAPULA_CODE_ALPHABET,
+  KAPULA_CODE_LENGTH,
+  KAPULA_PLAYER_NAME_MAX_LENGTH,
+  kapulaPlayerNameSchema,
   getSessionColors,
-  normalizeGamepadPlayerName,
-  type GamepadRosterEntry,
-  type GamepadSessionConfig,
-  type GamepadSessionState,
+  normalizeKapulaPlayerName,
+  type KapulaRosterEntry,
+  type KapulaSessionConfig,
+  type KapulaSessionState,
 } from "@kapula/protocol";
 
 /**
@@ -16,28 +16,28 @@ import {
  * tests can exercise them directly.
  */
 
-export const generateGamepadCode = (): string => {
+export const generateKapulaCode = (): string => {
   let code = "";
-  for (let i = 0; i < GAMEPAD_CODE_LENGTH; i++) {
-    code += GAMEPAD_CODE_ALPHABET[crypto.randomInt(GAMEPAD_CODE_ALPHABET.length)];
+  for (let i = 0; i < KAPULA_CODE_LENGTH; i++) {
+    code += KAPULA_CODE_ALPHABET[crypto.randomInt(KAPULA_CODE_ALPHABET.length)];
   }
   return code;
 };
 
-export const generateGamepadToken = (): string =>
+export const generateKapulaToken = (): string =>
   crypto.randomBytes(32).toString("hex");
 
 /**
- * Driver keys let a standalone driver create its own session (see GAMEPAD.md
+ * Driver keys let a standalone driver create its own session (see KAPULA.md
  * "Driver keys"). The `gpk_` prefix makes a leaked key recognizable in logs
  * and secret scanners; the value after it is 32 random bytes.
  */
-export const GAMEPAD_DRIVER_KEY_PREFIX = "gpk_";
+export const KAPULA_DRIVER_KEY_PREFIX = "gpk_";
 /** Characters of the plain key kept for display in the key list. */
-export const GAMEPAD_DRIVER_KEY_DISPLAY_CHARS = 8;
+export const KAPULA_DRIVER_KEY_DISPLAY_CHARS = 8;
 
 export const generateDriverKey = (): string =>
-  `${GAMEPAD_DRIVER_KEY_PREFIX}${crypto.randomBytes(32).toString("hex")}`;
+  `${KAPULA_DRIVER_KEY_PREFIX}${crypto.randomBytes(32).toString("hex")}`;
 
 /**
  * Keys are stored as their SHA-256 hash, so the plain value exists only in
@@ -49,7 +49,7 @@ export const hashDriverKey = (key: string): string =>
 
 /** What the key list shows: enough to tell two keys apart, not to use one. */
 export const driverKeyDisplayPrefix = (key: string): string =>
-  key.slice(0, GAMEPAD_DRIVER_KEY_PREFIX.length + GAMEPAD_DRIVER_KEY_DISPLAY_CHARS);
+  key.slice(0, KAPULA_DRIVER_KEY_PREFIX.length + KAPULA_DRIVER_KEY_DISPLAY_CHARS);
 
 /**
  * Fixed-window per-key rate limiter (no timers; windows roll over lazily on
@@ -105,7 +105,7 @@ export const sniffImageType = (
 /** Driver commands and the only transition each one is allowed to make. */
 export const DRIVER_TRANSITIONS: Record<
   "start" | "pause" | "resume" | "end" | "lobby",
-  { from: GamepadSessionState[]; to: GamepadSessionState }
+  { from: KapulaSessionState[]; to: KapulaSessionState }
 > = {
   start: { from: ["waiting_for_players"], to: "in_progress" },
   pause: { from: ["in_progress"], to: "paused" },
@@ -122,8 +122,8 @@ export type PlayerReadiness = { ready: boolean; connected: boolean };
 
 /** Returns null when the driver may start the game, else a reason. */
 export const getStartError = (params: {
-  state: GamepadSessionState;
-  config: GamepadSessionConfig;
+  state: KapulaSessionState;
+  config: KapulaSessionConfig;
   players: PlayerReadiness[];
 }): string | null => {
   if (params.state !== "waiting_for_players") {
@@ -153,8 +153,8 @@ export const getStartError = (params: {
  * capacity.
  */
 export const getJoinError = (params: {
-  state: GamepadSessionState;
-  config: GamepadSessionConfig;
+  state: KapulaSessionState;
+  config: KapulaSessionConfig;
   activePlayers: unknown[];
 }): string | null => {
   if (params.state === "not_initialized") {
@@ -176,8 +176,8 @@ export const getJoinError = (params: {
  * roster.
  */
 export const acceptsJoins = (
-  state: GamepadSessionState,
-  config: GamepadSessionConfig,
+  state: KapulaSessionState,
+  config: KapulaSessionConfig,
 ): boolean => {
   if (state === "waiting_for_players") return true;
   if (state !== "in_progress" && state !== "paused") return false;
@@ -185,7 +185,7 @@ export const acceptsJoins = (
 };
 
 /** Whether the driver predefined the players (names and colors are fixed). */
-export const isRosterSession = (config: GamepadSessionConfig): boolean =>
+export const isRosterSession = (config: KapulaSessionConfig): boolean =>
   config.roster !== undefined;
 
 /**
@@ -194,15 +194,15 @@ export const isRosterSession = (config: GamepadSessionConfig): boolean =>
  * (case-insensitive) and nobody may hold it already.
  */
 export const pickRosterSlot = (params: {
-  config: GamepadSessionConfig;
+  config: KapulaSessionConfig;
   activePlayers: { name: string }[];
   name: string | undefined;
-}): { slot: GamepadRosterEntry } | { error: string } => {
+}): { slot: KapulaRosterEntry } | { error: string } => {
   const roster = params.config.roster ?? [];
   if (!params.name) {
     return { error: "Pick which player you are" };
   }
-  const wanted = normalizeGamepadPlayerName(params.name).toLowerCase();
+  const wanted = normalizeKapulaPlayerName(params.name).toLowerCase();
   const slot = roster.find((entry) => entry.name.toLowerCase() === wanted);
   if (!slot) {
     return { error: "That player is not in this game" };
@@ -221,7 +221,7 @@ export const pickRosterSlot = (params: {
  * update_profile; `otherPlayers` must exclude the player being updated.
  */
 export const getProfileError = (params: {
-  config: GamepadSessionConfig;
+  config: KapulaSessionConfig;
   otherPlayers: { name: string; color: string }[];
   name: string;
   color: string;
@@ -249,10 +249,10 @@ export const pickDefaultName = (
 ): string => {
   const taken = new Set(takenNames.map((n) => n.toLowerCase()));
   if (preferred) {
-    const parsed = gamepadPlayerNameSchema.safeParse(
-      normalizeGamepadPlayerName(preferred).slice(
+    const parsed = kapulaPlayerNameSchema.safeParse(
+      normalizeKapulaPlayerName(preferred).slice(
         0,
-        GAMEPAD_PLAYER_NAME_MAX_LENGTH,
+        KAPULA_PLAYER_NAME_MAX_LENGTH,
       ),
     );
     if (parsed.success && !taken.has(parsed.data.toLowerCase())) {
@@ -267,7 +267,7 @@ export const pickDefaultName = (
 
 /** Color assigned at join: the first palette color nobody holds. */
 export const pickDefaultColor = (
-  config: GamepadSessionConfig,
+  config: KapulaSessionConfig,
   takenColors: string[],
 ): string | null => {
   const taken = new Set(takenColors);
@@ -275,7 +275,7 @@ export const pickDefaultColor = (
 };
 
 /** Ready toggling is a lobby action only. */
-export const canSetReady = (state: GamepadSessionState): boolean =>
+export const canSetReady = (state: KapulaSessionState): boolean =>
   state === "waiting_for_players";
 
 /**
@@ -283,8 +283,8 @@ export const canSetReady = (state: GamepadSessionState): boolean =>
  * where the driver fixed both.
  */
 export const canUpdateProfile = (
-  state: GamepadSessionState,
-  config?: GamepadSessionConfig,
+  state: KapulaSessionState,
+  config?: KapulaSessionConfig,
 ): boolean =>
   state === "waiting_for_players" && !(config && isRosterSession(config));
 
@@ -293,7 +293,7 @@ export const canUpdateProfile = (
  * controls is theirs to make mid-game, not something the driver's pause
  * gates. Only a session that is not running yet or already over refuses.
  */
-export const canSelectSchema = (state: GamepadSessionState): boolean =>
+export const canSelectSchema = (state: KapulaSessionState): boolean =>
   state === "waiting_for_players" ||
   state === "in_progress" ||
   state === "paused";
@@ -307,5 +307,5 @@ export const countsAsActivity = (messageType: string): boolean =>
   messageType !== "ping";
 
 /** Input is relayed only while the game runs. */
-export const canSendInput = (state: GamepadSessionState): boolean =>
+export const canSendInput = (state: KapulaSessionState): boolean =>
   state === "in_progress";

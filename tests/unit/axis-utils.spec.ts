@@ -4,7 +4,7 @@ import {
   roundAxis,
 } from "@kapula/phone/utils";
 import { gyroAxisValue } from "@kapula/phone/utils";
-import { gamepadInputFrameSchema } from "@kapula/protocol";
+import { kapulaInputFrameSchema } from "@kapula/protocol";
 
 /**
  * Every analog value on the wire goes through roundAxis: a dragged stick or a
@@ -37,7 +37,7 @@ test.describe("roundAxis", () => {
     );
     // Still a legal axis pair, and still where the thumb put it.
     expect(
-      gamepadInputFrameSchema.safeParse({ seq: 1, controls: { drive: rounded } })
+      kapulaInputFrameSchema.safeParse({ seq: 1, controls: { drive: rounded } })
         .success,
     ).toBe(true);
     expect(rounded.x).toBeCloseTo(raw.x, 3);

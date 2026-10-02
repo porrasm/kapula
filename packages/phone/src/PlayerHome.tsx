@@ -41,7 +41,7 @@ export const PlayerHome = ({
 }: PlayerHomeProps) => {
   const api = usePlayerApi();
   const statusQuery = useQuery({
-    queryKey: ["gamepad", "player-status", player?.token ?? ""],
+    queryKey: ["kapula", "player-status", player?.token ?? ""],
     queryFn: () => api.fetchPlayerStatus(player?.token ?? ""),
     enabled: player !== null,
     retry: false,

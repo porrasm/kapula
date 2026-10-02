@@ -1,31 +1,31 @@
 import express from "express";
 import {
-  GAMEPAD_DEFAULT_CONFIG,
-  type GamepadAuth,
-  type GamepadContext,
-  type GamepadLogger,
-  type GamepadServerConfig,
+  KAPULA_DEFAULT_CONFIG,
+  type KapulaAuth,
+  type KapulaContext,
+  type KapulaLogger,
+  type KapulaServerConfig,
 } from "./context.js";
 import { createDriverRouter } from "./driver-api.js";
 import { createHostRouter } from "./host-api.js";
 import { createPlayerRouter } from "./player-api.js";
 import { createSessionRuntimes } from "./runtime.js";
-import { createGamepadService } from "./service.js";
+import { createKapulaService } from "./service.js";
 import { createSignaling } from "./signaling.js";
-import type { GamepadStore } from "./store.js";
+import type { KapulaStore } from "./store.js";
 
-export type GamepadServerDeps = {
-  store: GamepadStore;
-  auth: GamepadAuth;
-  logger: GamepadLogger;
-  /** Overrides of {@link GAMEPAD_DEFAULT_CONFIG}; undefined values keep the default. */
-  config?: Partial<GamepadServerConfig>;
+export type KapulaServerDeps = {
+  store: KapulaStore;
+  auth: KapulaAuth;
+  logger: KapulaLogger;
+  /** Overrides of {@link KAPULA_DEFAULT_CONFIG}; undefined values keep the default. */
+  config?: Partial<KapulaServerConfig>;
 };
 
 const withDefaults = (
-  overrides: Partial<GamepadServerConfig> | undefined,
-): GamepadServerConfig => {
-  const config = { ...GAMEPAD_DEFAULT_CONFIG };
+  overrides: Partial<KapulaServerConfig> | undefined,
+): KapulaServerConfig => {
+  const config = { ...KAPULA_DEFAULT_CONFIG };
   for (const [key, value] of Object.entries(overrides ?? {})) {
     if (value !== undefined) (config as Record<string, unknown>)[key] = value;
   }
@@ -33,7 +33,7 @@ const withDefaults = (
 };
 
 /**
- * One gamepad server: everything the protocol needs on the server side,
+ * One Kapula server: everything the protocol needs on the server side,
  * built over the host's store, auth and logger. The host mounts
  * `httpRouter` (the driver, player and host JSON APIs) at `config.basePath`
  * outside its own user auth — the host API authenticates through
@@ -41,8 +41,8 @@ const withDefaults = (
  * `runCleanup` about once a minute. A host with its own RPC layer can skip
  * the host API and wrap `service` directly.
  */
-export const createGamepadServer = (deps: GamepadServerDeps) => {
-  const ctx: GamepadContext = {
+export const createKapulaServer = (deps: KapulaServerDeps) => {
+  const ctx: KapulaContext = {
     store: deps.store,
     auth: deps.auth,
     logger: deps.logger,
@@ -50,7 +50,7 @@ export const createGamepadServer = (deps: GamepadServerDeps) => {
   };
   const runtimes = createSessionRuntimes(ctx);
   const attachWebSocket = createSignaling(ctx, runtimes);
-  const service = createGamepadService(ctx, runtimes);
+  const service = createKapulaService(ctx, runtimes);
   const httpRouter = express
     .Router()
     .use(createDriverRouter(ctx, runtimes))
@@ -77,4 +77,4 @@ export const createGamepadServer = (deps: GamepadServerDeps) => {
   return { config: ctx.config, runtimes, httpRouter, attachWebSocket, service, runCleanup };
 };
 
-export type GamepadServer = ReturnType<typeof createGamepadServer>;
+export type KapulaServer = ReturnType<typeof createKapulaServer>;

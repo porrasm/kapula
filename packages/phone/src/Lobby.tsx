@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import {
-  GAMEPAD_PLAYER_NAME_MAX_LENGTH,
-  gamepadPlayerNameSchema,
+  KAPULA_PLAYER_NAME_MAX_LENGTH,
+  kapulaPlayerNameSchema,
   getSessionColors,
   hasSchemaChoice,
   PHYSICAL_GAMEPAD_SCHEMA_ID,
   PHYSICAL_GAMEPAD_SCHEMA_NAME,
   type ControlSchema,
-  type GamepadBackground,
-  type GamepadPlayerClientMessage,
-  type GamepadSessionSnapshot,
+  type KapulaBackground,
+  type KapulaPlayerClientMessage,
+  type KapulaSessionSnapshot,
 } from "@kapula/protocol";
 import { Button } from "./ui.js";
 import { Controller } from "./Controller.js";
@@ -24,9 +24,9 @@ import { SchemaPicker } from "./SchemaPicker.js";
 import { useLayoutOverride } from "./useLayoutOverride.js";
 
 type LobbyProps = {
-  snapshot: GamepadSessionSnapshot;
+  snapshot: KapulaSessionSnapshot;
   playerId: string;
-  send: (msg: GamepadPlayerClientMessage) => void;
+  send: (msg: KapulaPlayerClientMessage) => void;
 };
 
 /** Trial input stays on the phone — the game hasn't started, nothing listens. */
@@ -56,7 +56,7 @@ export const Lobby = ({ snapshot, playerId, send }: LobbyProps) => {
     setEditingName(false);
     const trimmed = nameDraft.trim();
     if (!trimmed || trimmed === me.name) return;
-    const parsed = gamepadPlayerNameSchema.safeParse(trimmed);
+    const parsed = kapulaPlayerNameSchema.safeParse(trimmed);
     if (!parsed.success) {
       setNameError(
         parsed.error.issues[0]?.message ?? "That name is not allowed",
@@ -117,7 +117,7 @@ export const Lobby = ({ snapshot, playerId, send }: LobbyProps) => {
             <input
               className="w-full rounded-kp bg-kp-bg-tertiary border border-kp-border px-3 py-2 text-kp-text-primary disabled:opacity-50"
               value={nameDraft}
-              maxLength={GAMEPAD_PLAYER_NAME_MAX_LENGTH}
+              maxLength={KAPULA_PLAYER_NAME_MAX_LENGTH}
               disabled={me.ready}
               data-testid="player-name-input"
               onFocus={() => {
@@ -229,7 +229,7 @@ const TrialController = ({
   schema: ControlSchema;
   driverAppUuid: string | undefined;
   customizable: boolean;
-  background: GamepadBackground | undefined;
+  background: KapulaBackground | undefined;
   onClose: () => void;
 }) => (
   // The surface owns orientation and pads the safe areas itself, exactly as
@@ -292,7 +292,7 @@ const TrialSurface = ({
   schema: ControlSchema;
   driverAppUuid: string | undefined;
   customizable: boolean;
-  background: GamepadBackground | undefined;
+  background: KapulaBackground | undefined;
   onClose: () => void;
 }) => {
   const frame = useContentFrame();

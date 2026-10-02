@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  GAMEPAD_METADATA_MAX_LENGTH,
-  type GamepadServerMessage,
-  type GamepadSessionSnapshot,
-  type GamepadStateChangeReason,
+  KAPULA_METADATA_MAX_LENGTH,
+  type KapulaServerMessage,
+  type KapulaSessionSnapshot,
+  type KapulaStateChangeReason,
 } from "@kapula/protocol";
-import type { GamepadMySession } from "@kapula/server";
+import type { KapulaMySession } from "@kapula/server";
 import {
   Badge,
   Button,
@@ -15,9 +15,9 @@ import {
   MissingRoster,
   PlayerList,
   applyServerMessage,
-  buildGamepadWsUrl,
+  buildKapulaWsUrl,
   sessionEndedNote,
-  useGamepadSocket,
+  useKapulaSocket,
   useKapulaConfig,
 } from "@kapula/phone";
 import { hostCall } from "./host-api";
@@ -38,7 +38,7 @@ export const HostPanel = () => (
 const useSessions = () =>
   useQuery({
     queryKey: ["host", "sessions"],
-    queryFn: () => hostCall<GamepadMySession[]>("listMySessions"),
+    queryFn: () => hostCall<KapulaMySession[]>("listMySessions"),
     refetchInterval: 15_000,
   });
 
@@ -71,7 +71,7 @@ const SessionCard = () => {
   const invalidateSessions = useInvalidateSessions();
   const sessionQuery = useQuery({
     queryKey: ["host", "my-session"],
-    queryFn: () => hostCall<GamepadMySession | null>("getMySession"),
+    queryFn: () => hostCall<KapulaMySession | null>("getMySession"),
   });
   const createMutation = useMutation({
     mutationFn: (metadata: string | undefined) =>
@@ -104,7 +104,7 @@ const SessionCard = () => {
             <textarea
               className="w-full h-24 rounded-kp bg-kp-bg-tertiary border border-kp-border px-3 py-2 text-kp-text-primary font-mono text-xs"
               value={metadata}
-              maxLength={GAMEPAD_METADATA_MAX_LENGTH}
+              maxLength={KAPULA_METADATA_MAX_LENGTH}
               spellCheck={false}
               placeholder="Metadata handed to the game at setup (optional)"
               data-testid="session-metadata-input"
@@ -142,7 +142,7 @@ const SessionCard = () => {
   );
 };
 
-const STATE_LABELS: Record<GamepadSessionSnapshot["state"], string> = {
+const STATE_LABELS: Record<KapulaSessionSnapshot["state"], string> = {
   not_initialized: "Waiting for the game",
   waiting_for_players: "Lobby open",
   in_progress: "In progress",
@@ -157,23 +157,23 @@ const HostDashboard = ({
 }: {
   sessionId: string;
   title: string;
-  onEnded: (reason: GamepadStateChangeReason | null) => void;
+  onEnded: (reason: KapulaStateChangeReason | null) => void;
 }) => {
   const invalidateSessions = useInvalidateSessions();
   const listQuery = useSessions();
   const session = listQuery.data?.find((s) => s.sessionId === sessionId) ?? null;
 
-  const [snapshot, setSnapshot] = useState<GamepadSessionSnapshot | null>(null);
+  const [snapshot, setSnapshot] = useState<KapulaSessionSnapshot | null>(null);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
-  const [endReason, setEndReason] = useState<GamepadStateChangeReason | null>(null);
+  const [endReason, setEndReason] = useState<KapulaStateChangeReason | null>(null);
 
   const { apiBase } = useKapulaConfig();
   const url = useMemo(
-    () => buildGamepadWsUrl(apiBase, { role: "host", sessionId }),
+    () => buildKapulaWsUrl(apiBase, { role: "host", sessionId }),
     [apiBase, sessionId],
   );
   const onMessage = useCallback(
-    (msg: GamepadServerMessage) => {
+    (msg: KapulaServerMessage) => {
       setSnapshot((prev) => applyServerMessage(prev, msg));
       if (msg.type === "state_changed" && msg.state === "ended") setEndReason(msg.reason);
       // Codes and config live in the session query; refresh it whenever the
@@ -182,7 +182,7 @@ const HostDashboard = ({
     },
     [invalidateSessions],
   );
-  const { fatalClose } = useGamepadSocket(url, onMessage);
+  const { fatalClose } = useKapulaSocket(url, onMessage);
 
   const endMutation = useMutation({
     mutationFn: () => hostCall("endMySession", { sessionId }),

@@ -56,7 +56,7 @@ test("driver setup responses carry CORS headers, error statuses included", async
 test("ws upgrade accepts a browser Origin header", async () => {
   // Browsers always send Origin on WebSocket handshakes. WsClient.open
   // resolving proves the handshake was accepted with it; the application-
-  // level close code that follows proves the gamepad code processed the
+  // level close code that follows proves the Kapula code processed the
   // connection (instead of the socket being rejected at upgrade).
   const client = await WsClient.open("?role=driver&token=bogus-token", {
     headers: { Origin: GAME_ORIGIN },

@@ -1,8 +1,8 @@
-import type { GamepadPlayerInfo, GamepadSessionSnapshot } from "@kapula/protocol";
+import type { KapulaPlayerInfo, KapulaSessionSnapshot } from "@kapula/protocol";
 import { Badge, Button } from "./ui.js";
 
 type PlayerListProps = {
-  players: GamepadPlayerInfo[];
+  players: KapulaPlayerInfo[];
   selfId?: string;
   showReady?: boolean;
   /** Host view only: removes the player from the session for good. */
@@ -56,7 +56,7 @@ export const PlayerList = ({
 export const MissingRoster = ({
   snapshot,
 }: {
-  snapshot: GamepadSessionSnapshot;
+  snapshot: KapulaSessionSnapshot;
 }) => {
   const roster = snapshot.config.roster;
   if (!roster) return null;

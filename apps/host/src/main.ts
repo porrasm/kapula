@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import cors from "cors";
 import express from "express";
-import { createGamepadServer, createMemoryGamepadStore } from "@kapula/server";
+import { createKapulaServer, createKapulaMemoryStore } from "@kapula/server";
 import { createHostAuth } from "./auth.js";
 import { readConfig } from "./config.js";
 
@@ -22,8 +22,8 @@ const API_BASE = "/api/gamepad";
 const main = async () => {
   const config = readConfig(process.env);
   const { auth, router: authRouter } = createHostAuth(config);
-  const gamepad = createGamepadServer({
-    store: createMemoryGamepadStore(),
+  const kapula = createKapulaServer({
+    store: createKapulaMemoryStore(),
     auth,
     logger: console,
     config: {
@@ -43,9 +43,9 @@ const main = async () => {
   app.use("/api", cors({ origin: true }));
   app.get("/api/health", (_req, res) => res.json({ ok: true }));
   app.use("/auth", authRouter);
-  app.use(gamepad.config.basePath, gamepad.httpRouter);
+  app.use(kapula.config.basePath, kapula.httpRouter);
   setInterval(() => {
-    gamepad.runCleanup().catch((e) => console.error("[kapula] cleanup failed", e));
+    kapula.runCleanup().catch((e) => console.error("[kapula] cleanup failed", e));
   }, 60_000).unref();
 
   if (config.production) {
@@ -63,7 +63,7 @@ const main = async () => {
   }
 
   const server = http.createServer(app);
-  gamepad.attachWebSocket(server);
+  kapula.attachWebSocket(server);
   server.listen(config.port, () => {
     console.log(
       `[kapula] host listening on http://localhost:${config.port}` +

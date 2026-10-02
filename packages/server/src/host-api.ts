@@ -1,12 +1,12 @@
 import express from "express";
 import { z } from "zod";
 import {
-  gamepadLinkedEmailsSchema,
-  gamepadPlayerNameSchema,
-  gamepadSessionMetadataSchema,
+  kapulaLinkedEmailsSchema,
+  kapulaPlayerNameSchema,
+  kapulaSessionMetadataSchema,
 } from "@kapula/protocol";
-import type { GamepadContext, GamepadHostUser } from "./context.js";
-import { GamepadServiceError, type GamepadService } from "./service.js";
+import type { KapulaContext, KapulaHostUser } from "./context.js";
+import { KapulaServiceError, type KapulaService } from "./service.js";
 
 /**
  * JSON API for the host page — the logged-in user who creates sessions and
@@ -24,7 +24,7 @@ const sessionIdSchema = z.string().regex(/^\d{1,18}$/);
 
 const OPERATIONS = {
   createSession: z
-    .object({ metadata: gamepadSessionMetadataSchema.optional() })
+    .object({ metadata: kapulaSessionMetadataSchema.optional() })
     .optional(),
   getMySession: z.undefined().optional(),
   listMySessions: z.undefined().optional(),
@@ -36,38 +36,38 @@ const OPERATIONS = {
   }),
   createDriverKey: z.object({
     name: z.string().trim().min(1).max(64),
-    linkedEmails: gamepadLinkedEmailsSchema.optional(),
+    linkedEmails: kapulaLinkedEmailsSchema.optional(),
   }),
   listDriverKeys: z.undefined().optional(),
   setDriverKeyEmails: z.object({
     id: z.number().int().positive(),
-    linkedEmails: gamepadLinkedEmailsSchema,
+    linkedEmails: kapulaLinkedEmailsSchema,
   }),
   revokeDriverKey: z.object({ id: z.number().int().positive() }),
   listPrivateSessions: z.undefined().optional(),
   joinPrivateSession: z.object({
     sessionId: sessionIdSchema,
-    name: gamepadPlayerNameSchema.optional(),
+    name: kapulaPlayerNameSchema.optional(),
   }),
 } as const;
 
-export type GamepadHostOperation = keyof typeof OPERATIONS;
-export const GAMEPAD_HOST_OPERATIONS = Object.keys(OPERATIONS) as GamepadHostOperation[];
+export type KapulaHostOperation = keyof typeof OPERATIONS;
+export const KAPULA_HOST_OPERATIONS = Object.keys(OPERATIONS) as KapulaHostOperation[];
 
-type Input<O extends GamepadHostOperation> = z.infer<(typeof OPERATIONS)[O]>;
+type Input<O extends KapulaHostOperation> = z.infer<(typeof OPERATIONS)[O]>;
 
 const STATUS_BY_CODE = { not_found: 404, conflict: 409 } as const;
 
 export const createHostRouter = (
-  ctx: GamepadContext,
-  service: GamepadService,
+  ctx: KapulaContext,
+  service: KapulaService,
 ): express.Router => {
   const { auth, logger } = ctx;
   const router = express.Router();
 
   const run = async (
-    op: GamepadHostOperation,
-    user: GamepadHostUser,
+    op: KapulaHostOperation,
+    user: KapulaHostUser,
     input: unknown,
   ): Promise<unknown> => {
     switch (op) {
@@ -118,7 +118,7 @@ export const createHostRouter = (
   };
 
   router.post("/:op", express.json(), async (req, res) => {
-    const op = req.params.op as GamepadHostOperation;
+    const op = req.params.op as KapulaHostOperation;
     const schema = OPERATIONS[op];
     if (!schema) {
       res.status(404).json({ success: false, error: "Unknown operation", code: "not_found" });
@@ -147,11 +147,11 @@ export const createHostRouter = (
       }
       res.json({ success: true, data: await run(op, user, parsed.data) });
     } catch (e) {
-      if (e instanceof GamepadServiceError) {
+      if (e instanceof KapulaServiceError) {
         res.status(STATUS_BY_CODE[e.code]).json({ success: false, error: e.message, code: e.code });
         return;
       }
-      logger.error(`[gamepad] host ${op} failed`, e);
+      logger.error(`[kapula] host ${op} failed`, e);
       res.status(500).json({ success: false, error: "Internal server error", code: "internal" });
     }
   });

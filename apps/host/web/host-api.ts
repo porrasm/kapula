@@ -1,4 +1,4 @@
-import type { GamepadHostOperation } from "@kapula/server";
+import type { KapulaHostOperation } from "@kapula/server";
 
 /**
  * The host page's client for `POST /api/gamepad/host/<op>` (see
@@ -8,7 +8,7 @@ import type { GamepadHostOperation } from "@kapula/server";
 export const API_BASE = "/api/gamepad";
 
 export const hostCall = async <T = unknown>(
-  op: GamepadHostOperation,
+  op: KapulaHostOperation,
   input?: unknown,
 ): Promise<T> => {
   const res = await fetch(`${API_BASE}/host/${op}`, {

@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 import {
-  GAMEPAD_CODE_ALPHABET,
-  GAMEPAD_CODE_LENGTH,
-  GAMEPAD_DEFAULT_COLORS,
-  gamepadSessionConfigSchema,
+  KAPULA_CODE_ALPHABET,
+  KAPULA_CODE_LENGTH,
+  KAPULA_DEFAULT_COLORS,
+  kapulaSessionConfigSchema,
 } from "@kapula/protocol";
 import {
   DRIVER_TRANSITIONS,
@@ -17,8 +17,8 @@ import {
   driverKeyDisplayPrefix,
   generateDriverKey,
   hashDriverKey,
-  generateGamepadCode,
-  generateGamepadToken,
+  generateKapulaCode,
+  generateKapulaToken,
   getJoinError,
   getProfileError,
   getStartError,
@@ -28,7 +28,7 @@ import {
   pickRosterSlot,
 } from "@kapula/server";
 
-const config = gamepadSessionConfigSchema.parse({
+const config = kapulaSessionConfigSchema.parse({
   minPlayers: 2,
   maxPlayers: 3,
 });
@@ -36,17 +36,17 @@ const config = gamepadSessionConfigSchema.parse({
 test.describe("code and token generation", () => {
   test("codes use only the unambiguous alphabet", () => {
     for (let i = 0; i < 100; i++) {
-      const code = generateGamepadCode();
-      expect(code).toHaveLength(GAMEPAD_CODE_LENGTH);
+      const code = generateKapulaCode();
+      expect(code).toHaveLength(KAPULA_CODE_LENGTH);
       for (const char of code) {
-        expect(GAMEPAD_CODE_ALPHABET).toContain(char);
+        expect(KAPULA_CODE_ALPHABET).toContain(char);
       }
     }
   });
 
   test("tokens are long and unique", () => {
-    const a = generateGamepadToken();
-    const b = generateGamepadToken();
+    const a = generateKapulaToken();
+    const b = generateKapulaToken();
     expect(a).toHaveLength(64);
     expect(a).not.toBe(b);
   });
@@ -85,7 +85,7 @@ test.describe("getStartError", () => {
   });
 
   test("an empty session can never start", () => {
-    const solo = gamepadSessionConfigSchema.parse({ minPlayers: 1 });
+    const solo = kapulaSessionConfigSchema.parse({ minPlayers: 1 });
     expect(
       getStartError({ state: "waiting_for_players", config: solo, players: [] }),
     ).toContain("at least 1");
@@ -111,7 +111,7 @@ test.describe("getStartError", () => {
 });
 
 test.describe("roster sessions", () => {
-  const rosterConfig = gamepadSessionConfigSchema.parse({
+  const rosterConfig = kapulaSessionConfigSchema.parse({
     roster: [
       { name: "Player 1", color: "#FF6B6B" },
       { name: "Player 2", color: "#6BCB77" },
@@ -223,7 +223,7 @@ test.describe("getJoinError", () => {
 });
 
 test.describe("skipLobby", () => {
-  const noLobby = gamepadSessionConfigSchema.parse({
+  const noLobby = kapulaSessionConfigSchema.parse({
     minPlayers: 2,
     maxPlayers: 2,
     skipLobby: true,
@@ -254,9 +254,9 @@ test.describe("skipLobby", () => {
   });
 
   test("defaults off and cannot be combined with a roster", () => {
-    expect(gamepadSessionConfigSchema.parse({}).skipLobby).toBe(false);
+    expect(kapulaSessionConfigSchema.parse({}).skipLobby).toBe(false);
     expect(
-      gamepadSessionConfigSchema.safeParse({
+      kapulaSessionConfigSchema.safeParse({
         skipLobby: true,
         roster: [{ name: "Player 1", color: "#FF6B6B" }],
       }).success,
@@ -311,7 +311,7 @@ test.describe("default name and color assignment", () => {
 
   test("picks the first free palette color", () => {
     const palette = ["#FF6B6B", "#4D96FF", "#6BCB77"];
-    const custom = gamepadSessionConfigSchema.parse({
+    const custom = kapulaSessionConfigSchema.parse({
       maxPlayers: 3,
       colors: palette,
     });
@@ -387,13 +387,13 @@ test.describe("state gates", () => {
   });
 
   test("late join is opt-in, and never in a roster session", () => {
-    const plain = gamepadSessionConfigSchema.parse({});
-    const late = gamepadSessionConfigSchema.parse({ allowLateJoin: true });
-    const lateRoster = gamepadSessionConfigSchema.parse({
+    const plain = kapulaSessionConfigSchema.parse({});
+    const late = kapulaSessionConfigSchema.parse({ allowLateJoin: true });
+    const lateRoster = kapulaSessionConfigSchema.parse({
       allowLateJoin: true,
       roster: [
-        { name: "Ada", color: GAMEPAD_DEFAULT_COLORS[0] },
-        { name: "Grace", color: GAMEPAD_DEFAULT_COLORS[1] },
+        { name: "Ada", color: KAPULA_DEFAULT_COLORS[0] },
+        { name: "Grace", color: KAPULA_DEFAULT_COLORS[1] },
       ],
     });
 

@@ -1,4 +1,4 @@
-import type { GamepadGyroMode, GamepadInputValue } from "@kapula/protocol";
+import type { KapulaGyroMode, KapulaInputValue } from "@kapula/protocol";
 import { roundAxis } from "./axis-utils.js";
 
 /**
@@ -146,9 +146,9 @@ export const tiltToAxes = (
  * are rounded here — the one place every gyro frame passes through.
  */
 export const gyroAxisValue = (
-  mode: GamepadGyroMode,
+  mode: KapulaGyroMode,
   axes: { x: number; y: number },
-): GamepadInputValue => {
+): KapulaInputValue => {
   const x = roundAxis(axes.x);
   const y = roundAxis(axes.y);
   return mode === "x" ? { x } : mode === "y" ? { y } : { x, y };

@@ -1,9 +1,9 @@
 import type { IncomingMessage } from "http";
-import { GAMEPAD_DRIVER_LOST_TIMEOUT_MS } from "@kapula/protocol";
-import type { GamepadStore } from "./store.js";
+import { KAPULA_DRIVER_LOST_TIMEOUT_MS } from "@kapula/protocol";
+import type { KapulaStore } from "./store.js";
 
 /**
- * What the gamepad server needs from its host, besides a store: who the
+ * What the Kapula server needs from its host, besides a store: who the
  * logged-in user behind an HTTP request is (only the host WebSocket role
  * needs it — drivers and players authenticate with their own tokens), a
  * logger, and a few settings. A web host supplies its cookie auth, logger
@@ -11,25 +11,25 @@ import type { GamepadStore } from "./store.js";
  * constant owner and defaults. See apps/host for the reference host.
  */
 
-export type GamepadHostUser = {
+export type KapulaHostUser = {
   id: number;
   /** Lowercased; matched against the emails linked to driver keys (private sessions). */
   email: string;
 };
 
-export type GamepadAuth = {
+export type KapulaAuth = {
   /** The user behind a request, for the host WebSocket; null when nobody. */
-  getUserFromRequest(req: IncomingMessage): Promise<GamepadHostUser | null>;
+  getUserFromRequest(req: IncomingMessage): Promise<KapulaHostUser | null>;
 };
 
-export type GamepadLogger = {
+export type KapulaLogger = {
   debug(message?: unknown, ...rest: unknown[]): void;
   info(message?: unknown, ...rest: unknown[]): void;
   warn(message?: unknown, ...rest: unknown[]): void;
   error(message?: unknown, ...rest: unknown[]): void;
 };
 
-export type GamepadServerConfig = {
+export type KapulaServerConfig = {
   /**
    * Where the driver HTTP router is mounted; the WebSocket path and the
    * background image URLs hang off it.
@@ -56,18 +56,18 @@ export type GamepadServerConfig = {
   allowRateLimitKeyHeader: boolean;
 };
 
-export const GAMEPAD_DEFAULT_CONFIG: GamepadServerConfig = {
+export const KAPULA_DEFAULT_CONFIG: KapulaServerConfig = {
   basePath: "/api/gamepad",
   playerAppPath: "/gamepad",
   publicOrigin: null,
-  driverLostTimeoutMs: GAMEPAD_DRIVER_LOST_TIMEOUT_MS,
+  driverLostTimeoutMs: KAPULA_DRIVER_LOST_TIMEOUT_MS,
   keepaliveIntervalMs: 30_000,
   allowRateLimitKeyHeader: false,
 };
 
-export type GamepadContext = {
-  store: GamepadStore;
-  auth: GamepadAuth;
-  logger: GamepadLogger;
-  config: GamepadServerConfig;
+export type KapulaContext = {
+  store: KapulaStore;
+  auth: KapulaAuth;
+  logger: KapulaLogger;
+  config: KapulaServerConfig;
 };

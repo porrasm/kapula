@@ -1,29 +1,29 @@
 import express from "express";
 import {
-  GAMEPAD_BACKGROUND_MAX_BYTES,
-  GAMEPAD_PROTOCOL_VERSION,
-  gamepadBackgroundFitSchema,
-  gamepadDriverCreateRequestSchema,
-  gamepadDriverSetupRequestSchema,
-  type GamepadDriverSetupResponse,
-  type GamepadSessionConfig,
+  KAPULA_BACKGROUND_MAX_BYTES,
+  KAPULA_PROTOCOL_VERSION,
+  kapulaBackgroundFitSchema,
+  kapulaDriverCreateRequestSchema,
+  kapulaDriverSetupRequestSchema,
+  type KapulaDriverSetupResponse,
+  type KapulaSessionConfig,
 } from "@kapula/protocol";
-import type { GamepadContext } from "./context.js";
+import type { KapulaContext } from "./context.js";
 import {
   createRateLimiter,
-  generateGamepadCode,
-  generateGamepadToken,
+  generateKapulaCode,
+  generateKapulaToken,
   hashDriverKey,
   sniffImageType,
 } from "./logic.js";
 import type { SessionRuntimes } from "./runtime.js";
-import { isStoreConflict, type GamepadSessionRecord } from "./store.js";
+import { isStoreConflict, type KapulaSessionRecord } from "./store.js";
 
 /**
  * Plain JSON API for external drivers (games, desktop clients) — they should
  * not need a tRPC client. Mount it outside any user-session auth: drivers are
  * authenticated by the setup code / driver token, not by a user session.
- * Documented in GAMEPAD.md.
+ * Documented in KAPULA.md.
  */
 
 /**
@@ -45,10 +45,10 @@ const getBearerKey = (req: express.Request): string | null => {
 
 /** Shared by both entry points; absent means "whatever this server serves". */
 const unsupportedVersion = (protocolVersion: number | undefined): boolean =>
-  protocolVersion !== undefined && protocolVersion !== GAMEPAD_PROTOCOL_VERSION;
+  protocolVersion !== undefined && protocolVersion !== KAPULA_PROTOCOL_VERSION;
 
 export const createDriverRouter = (
-  ctx: GamepadContext,
+  ctx: KapulaContext,
   runtimes: SessionRuntimes,
 ): express.Router => {
   const { store, logger, config } = ctx;
@@ -114,18 +114,18 @@ export const createDriverRouter = (
    * Returns null when the session was claimed by someone else in between.
    */
   const setUpSession = async (
-    session: GamepadSessionRecord,
-    sessionConfig: GamepadSessionConfig,
+    session: KapulaSessionRecord,
+    sessionConfig: KapulaSessionConfig,
     req: express.Request,
-  ): Promise<GamepadDriverSetupResponse | null> => {
-    const driverToken = generateGamepadToken();
-    let updated: GamepadSessionRecord | null = null;
+  ): Promise<KapulaDriverSetupResponse | null> => {
+    const driverToken = generateKapulaToken();
+    let updated: KapulaSessionRecord | null = null;
     // Join codes are unique among active sessions; retry on collisions.
     for (let i = 0; i < 5 && !updated; i++) {
       try {
         updated = await store.setupSession({
           sessionId: session.id,
-          joinCode: generateGamepadCode(),
+          joinCode: generateKapulaCode(),
           driverToken,
           config: sessionConfig,
         });
@@ -142,7 +142,7 @@ export const createDriverRouter = (
 
     const wsPath = `${config.basePath}/ws?role=driver&token=${driverToken}`;
     return {
-      protocolVersion: GAMEPAD_PROTOCOL_VERSION,
+      protocolVersion: KAPULA_PROTOCOL_VERSION,
       sessionId: updated.id,
       joinCode: updated.joinCode,
       joinUrl: buildJoinUrl(req, updated.joinCode, sessionConfig.private),
@@ -164,7 +164,7 @@ export const createDriverRouter = (
           .json({ success: false, error: "Too many attempts, slow down" });
       }
 
-      const parsed = gamepadDriverSetupRequestSchema.safeParse(req.body);
+      const parsed = kapulaDriverSetupRequestSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({
           success: false,
@@ -183,7 +183,7 @@ export const createDriverRouter = (
         return res.status(400).json({
           success: false,
           error: "Unsupported protocol version",
-          supported: [GAMEPAD_PROTOCOL_VERSION],
+          supported: [KAPULA_PROTOCOL_VERSION],
         });
       }
 
@@ -203,7 +203,7 @@ export const createDriverRouter = (
       }
       return res.json({ success: true, ...response });
     } catch (e) {
-      logger.error("[gamepad] driver setup failed", e);
+      logger.error("[kapula] driver setup failed", e);
       return res
         .status(500)
         .json({ success: false, error: "Internal server error" });
@@ -230,7 +230,7 @@ export const createDriverRouter = (
           .json({ success: false, error: "Driver key required" });
       }
 
-      const parsed = gamepadDriverCreateRequestSchema.safeParse(req.body ?? {});
+      const parsed = kapulaDriverCreateRequestSchema.safeParse(req.body ?? {});
       if (!parsed.success) {
         return res.status(400).json({
           success: false,
@@ -245,7 +245,7 @@ export const createDriverRouter = (
         return res.status(400).json({
           success: false,
           error: "Unsupported protocol version",
-          supported: [GAMEPAD_PROTOCOL_VERSION],
+          supported: [KAPULA_PROTOCOL_VERSION],
         });
       }
 
@@ -277,12 +277,12 @@ export const createDriverRouter = (
       // The session is born and claimed in one call, so its setup code exists
       // only for the moment between (setUpSession consumes it) — nobody ever
       // sees or types it.
-      let session: GamepadSessionRecord | null = null;
+      let session: KapulaSessionRecord | null = null;
       for (let i = 0; i < 5 && !session; i++) {
         try {
           session = await store.createSession({
             ownerId: keyRecord.userId,
-            setupCode: generateGamepadCode(),
+            setupCode: generateKapulaCode(),
             metadata: null,
             driverKeyId: keyRecord.id,
           });
@@ -305,7 +305,7 @@ export const createDriverRouter = (
       await store.touchDriverKeyUsed(keyRecord.id);
       return res.json({ success: true, ...response });
     } catch (e) {
-      logger.error("[gamepad] driver create failed", e);
+      logger.error("[kapula] driver create failed", e);
       return res
         .status(500)
         .json({ success: false, error: "Internal server error" });
@@ -328,7 +328,7 @@ export const createDriverRouter = (
   const requireDriverSession = async (
     req: express.Request,
     res: express.Response,
-  ): Promise<GamepadSessionRecord | null> => {
+  ): Promise<KapulaSessionRecord | null> => {
     const token = getBearerKey(req);
     if (!token) {
       res.status(401).json({ success: false, error: "Driver token required" });
@@ -353,7 +353,7 @@ export const createDriverRouter = (
   /**
    * `POST {basePath}/driver/background?fit=cover|contain|fill` — the body is
    * the image itself (PNG, JPEG, GIF or WebP, at most
-   * GAMEPAD_BACKGROUND_MAX_BYTES), whatever Content-Type it claims. Replaces
+   * KAPULA_BACKGROUND_MAX_BYTES), whatever Content-Type it claims. Replaces
    * the session's previous image; every phone switches to it at once.
    */
   router.post(
@@ -370,16 +370,16 @@ export const createDriverRouter = (
         next(e);
       }
     },
-    express.raw({ type: () => true, limit: GAMEPAD_BACKGROUND_MAX_BYTES }),
+    express.raw({ type: () => true, limit: KAPULA_BACKGROUND_MAX_BYTES }),
     async (req, res) => {
       try {
-        const session = res.locals.session as GamepadSessionRecord;
+        const session = res.locals.session as KapulaSessionRecord;
 
-        const fit = gamepadBackgroundFitSchema.safeParse(req.query.fit ?? "cover");
+        const fit = kapulaBackgroundFitSchema.safeParse(req.query.fit ?? "cover");
         if (!fit.success) {
           return res.status(400).json({
             success: false,
-            error: `fit must be one of ${gamepadBackgroundFitSchema.options.join(", ")}`,
+            error: `fit must be one of ${kapulaBackgroundFitSchema.options.join(", ")}`,
           });
         }
         const body: unknown = req.body;
@@ -396,7 +396,7 @@ export const createDriverRouter = (
           sessionId: session.id,
           // A fresh key per upload: the URL names one version of the image,
           // so phones cache it forever and a new upload is a new URL.
-          key: generateGamepadToken(),
+          key: generateKapulaToken(),
           contentType,
           fit: fit.data,
           data: bytes.toString("base64"),
@@ -405,7 +405,7 @@ export const createDriverRouter = (
         runtimes.notifyBackgroundChanged(session.id, background);
         return res.json({ success: true, background });
       } catch (e) {
-        logger.error("[gamepad] background upload failed", e);
+        logger.error("[kapula] background upload failed", e);
         return res
           .status(500)
           .json({ success: false, error: "Internal server error" });
@@ -426,10 +426,10 @@ export const createDriverRouter = (
       if (err.type === "entity.too.large") {
         return res.status(413).json({
           success: false,
-          error: `Image too large (max ${GAMEPAD_BACKGROUND_MAX_BYTES} bytes)`,
+          error: `Image too large (max ${KAPULA_BACKGROUND_MAX_BYTES} bytes)`,
         });
       }
-      logger.error("[gamepad] background upload failed", err);
+      logger.error("[kapula] background upload failed", err);
       return res
         .status(err.status ?? 500)
         .json({ success: false, error: "Could not read the upload" });
@@ -445,7 +445,7 @@ export const createDriverRouter = (
       if (removed) runtimes.notifyBackgroundChanged(session.id, null);
       return res.json({ success: true });
     } catch (e) {
-      logger.error("[gamepad] background delete failed", e);
+      logger.error("[kapula] background delete failed", e);
       return res
         .status(500)
         .json({ success: false, error: "Internal server error" });
@@ -473,7 +473,7 @@ export const createDriverRouter = (
       });
       return res.send(Buffer.from(image.data, "base64"));
     } catch (e) {
-      logger.error("[gamepad] background fetch failed", e);
+      logger.error("[kapula] background fetch failed", e);
       return res
         .status(500)
         .json({ success: false, error: "Internal server error" });

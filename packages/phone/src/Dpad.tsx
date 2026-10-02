@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import type { GamepadDpadDirection } from "@kapula/protocol";
+import type { KapulaDpadDirection } from "@kapula/protocol";
 import { pointToDpadDirection } from "./layout-utils.js";
 import { pointerDeltaInFrame } from "./pointer-utils.js";
 import { useContentFrame } from "./OrientedSurface.js";
@@ -10,7 +10,7 @@ type DpadProps = {
   testId?: string;
   disabled: boolean;
   /** Fires only when the direction actually changes; release sends "rest". */
-  onChange: (direction: GamepadDpadDirection) => void;
+  onChange: (direction: KapulaDpadDirection) => void;
 };
 
 /**
@@ -21,11 +21,11 @@ type DpadProps = {
 export const Dpad = ({ size, label, testId, disabled, onChange }: DpadProps) => {
   const padRef = useRef<HTMLDivElement | null>(null);
   const pointerIdRef = useRef<number | null>(null);
-  const [direction, setDirection] = useState<GamepadDpadDirection>("c");
-  const directionRef = useRef<GamepadDpadDirection>("c");
+  const [direction, setDirection] = useState<KapulaDpadDirection>("c");
+  const directionRef = useRef<KapulaDpadDirection>("c");
   const { synthetic } = useContentFrame();
 
-  const apply = (next: GamepadDpadDirection) => {
+  const apply = (next: KapulaDpadDirection) => {
     if (next === directionRef.current) return;
     directionRef.current = next;
     setDirection(next);

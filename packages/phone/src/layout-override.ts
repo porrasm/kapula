@@ -1,4 +1,4 @@
-import type { GamepadControl } from "@kapula/protocol";
+import type { KapulaControl } from "@kapula/protocol";
 import type { ScreenAngle } from "./gyro-utils.js";
 import type { ResolvedLayout, Viewport } from "./layout-utils.js";
 import { rotateDelta, type ContentOrientation } from "./orientation-utils.js";
@@ -89,15 +89,15 @@ export const hasLayoutEdits = (override: LayoutOverride | null): boolean =>
 
 /** Whether the player may swap this control between full and relative. */
 export const isStickModeToggleable = (
-  control: GamepadControl,
-): control is GamepadControl & { type: "joystick"; mode: StickMode } =>
+  control: KapulaControl,
+): control is KapulaControl & { type: "joystick"; mode: StickMode } =>
   control.type === "joystick" &&
   (control.mode === "full" || control.mode === "relative");
 
 /** The mode a stick plays in: the player's choice, else the driver's. */
 export const effectiveStickMode = (
   override: LayoutOverride | null,
-  control: GamepadControl,
+  control: KapulaControl,
 ): StickMode | null => {
   if (!isStickModeToggleable(control)) return null;
   return override?.sticks[control.id] ?? control.mode;
@@ -111,7 +111,7 @@ export const effectiveStickMode = (
 export const toggleStickMode = (
   override: LayoutOverride | null,
   mode: LayoutMode,
-  control: GamepadControl,
+  control: KapulaControl,
 ): LayoutOverride | null => {
   if (!isStickModeToggleable(control)) return override;
   const base =

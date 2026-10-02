@@ -1,16 +1,16 @@
 import {
-  GamepadStoreConflictError,
-  type GamepadBackgroundImage,
-  type GamepadBackgroundMeta,
-  type GamepadDriverKeyRecord,
-  type GamepadPlayerRecord,
-  type GamepadPrivateSessionRecord,
-  type GamepadSessionRecord,
-  type GamepadStore,
+  KapulaStoreConflictError,
+  type KapulaBackgroundImage,
+  type KapulaBackgroundMeta,
+  type KapulaDriverKeyRecord,
+  type KapulaPlayerRecord,
+  type KapulaPrivateSessionRecord,
+  type KapulaSessionRecord,
+  type KapulaStore,
 } from "./store.js";
 
 /**
- * The `GamepadStore` contract in process memory: for an embedded host (a
+ * The `KapulaStore` contract in process memory: for an embedded host (a
  * desktop app hosting its own phones) and for tests. Sessions are ephemeral
  * by nature — a host that restarts simply creates new ones — so nothing is
  * written anywhere. The clock is injectable so the time rules (idle and
@@ -27,7 +27,7 @@ const NOT_INITIALIZED_IDLE_MS = 30 * 60 * 1000;
 type SessionRow = {
   id: string;
   ownerId: number;
-  state: GamepadSessionRecord["state"];
+  state: KapulaSessionRecord["state"];
   setupCode: string | null;
   joinCode: string | null;
   driverToken: string | null;
@@ -72,15 +72,15 @@ type BackgroundRow = {
   data: string;
 };
 
-const conflict = (what: string) => new GamepadStoreConflictError(`${what} is taken`);
+const conflict = (what: string) => new KapulaStoreConflictError(`${what} is taken`);
 
 /** What a JSON column does to a value: drops undefined, stringifies dates. */
 const jsonClone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
-export const createMemoryGamepadStore = (options: {
+export const createKapulaMemoryStore = (options: {
   /** The store's clock, in milliseconds; defaults to `Date.now`. */
   now?: () => number;
-} = {}): GamepadStore => {
+} = {}): KapulaStore => {
   const now = options.now ?? Date.now;
   const sessions = new Map<string, SessionRow>();
   const players = new Map<string, PlayerRow>();
@@ -90,7 +90,7 @@ export const createMemoryGamepadStore = (options: {
   let nextPlayerId = 1;
   let nextKeyId = 1;
 
-  const toSession = (row: SessionRow): GamepadSessionRecord => ({
+  const toSession = (row: SessionRow): KapulaSessionRecord => ({
     id: row.id,
     ownerId: row.ownerId,
     state: row.state,
@@ -104,7 +104,7 @@ export const createMemoryGamepadStore = (options: {
     createdAt: new Date(row.createdAt),
   });
 
-  const toPlayer = (row: PlayerRow): GamepadPlayerRecord => ({
+  const toPlayer = (row: PlayerRow): KapulaPlayerRecord => ({
     id: row.id,
     sessionId: row.sessionId,
     name: row.name,
@@ -115,7 +115,7 @@ export const createMemoryGamepadStore = (options: {
     createdAt: new Date(row.createdAt),
   });
 
-  const toKey = (row: KeyRow): GamepadDriverKeyRecord => ({
+  const toKey = (row: KeyRow): KapulaDriverKeyRecord => ({
     id: row.id,
     userId: row.userId,
     name: row.name,
@@ -125,7 +125,7 @@ export const createMemoryGamepadStore = (options: {
     lastUsedAt: row.lastUsedAt === null ? null : new Date(row.lastUsedAt),
   });
 
-  const toBackgroundMeta = (row: BackgroundRow): GamepadBackgroundMeta => ({
+  const toBackgroundMeta = (row: BackgroundRow): KapulaBackgroundMeta => ({
     key: row.key,
     fit: row.fit,
   });
@@ -337,7 +337,7 @@ export const createMemoryGamepadStore = (options: {
       return toPlayer(row);
     },
     clearReadyBySession: async (sessionId) => {
-      const changed: GamepadPlayerRecord[] = [];
+      const changed: KapulaPlayerRecord[] = [];
       for (const row of activePlayersOf(sessionId)) {
         if (!row.ready) continue;
         row.ready = false;
@@ -414,7 +414,7 @@ export const createMemoryGamepadStore = (options: {
     // --- Private sessions ---
 
     getPrivateSessionsForUser: async ({ userId, email, sessionId = null }) => {
-      const result: GamepadPrivateSessionRecord[] = [];
+      const result: KapulaPrivateSessionRecord[] = [];
       for (const row of activeSessions().sort(byCreation)) {
         if (row.state === "not_initialized") continue;
         if (row.config?.private !== true) continue;
@@ -448,7 +448,7 @@ export const createMemoryGamepadStore = (options: {
       const row = backgrounds.get(sessionId);
       return row ? toBackgroundMeta(row) : null;
     },
-    getLiveBackgroundByKey: async (key): Promise<GamepadBackgroundImage | null> => {
+    getLiveBackgroundByKey: async (key): Promise<KapulaBackgroundImage | null> => {
       for (const row of backgrounds.values()) {
         if (row.key !== key) continue;
         if (!activeSession(row.sessionId)) return null;

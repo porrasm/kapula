@@ -4,11 +4,11 @@ import type { IncomingMessage } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { URL } from "url";
 import {
-  gamepadDriverClientMessageSchema,
-  gamepadPlayerClientMessageSchema,
+  kapulaDriverClientMessageSchema,
+  kapulaPlayerClientMessageSchema,
   isSelectableSchemaId,
 } from "@kapula/protocol";
-import type { GamepadContext } from "./context.js";
+import type { KapulaContext } from "./context.js";
 import {
   canSelectSchema,
   canSendInput,
@@ -30,7 +30,7 @@ import {
   type SessionRuntime,
   type SessionRuntimes,
 } from "./runtime.js";
-import { isStoreConflict, type GamepadPlayerRecord, type GamepadSessionRecord } from "./store.js";
+import { isStoreConflict, type KapulaPlayerRecord, type KapulaSessionRecord } from "./store.js";
 
 /** Oversized frames are dropped without parsing. */
 const MAX_MESSAGE_BYTES = 8192;
@@ -62,12 +62,12 @@ const replaceSocket = (previous: WebSocket | null | undefined) => {
 };
 
 /**
- * The WebSocket side of the gamepad server: one socket per role (driver,
+ * The WebSocket side of the Kapula server: one socket per role (driver,
  * player, host) on `${basePath}/ws`. Returns the function that attaches the
  * upgrade handler to an HTTP(S) server.
  */
 export const createSignaling = (
-  ctx: GamepadContext,
+  ctx: KapulaContext,
   runtimes: SessionRuntimes,
 ) => {
   const { store, auth, logger, config } = ctx;
@@ -76,7 +76,7 @@ export const createSignaling = (
   /** Moves players onto a schema and tells everyone, one event per player. */
   const setPlayersSchema = async (
     runtime: SessionRuntime,
-    players: GamepadPlayerRecord[],
+    players: KapulaPlayerRecord[],
     schemaId: string,
   ): Promise<void> => {
     for (const player of players) {
@@ -156,7 +156,7 @@ export const createSignaling = (
 
   const handleDriverConnection = async (
     ws: WebSocket,
-    session: GamepadSessionRecord,
+    session: KapulaSessionRecord,
   ) => {
     const runtime = runtimes.getRuntime(session);
     replaceSocket(runtime.driver);
@@ -170,7 +170,7 @@ export const createSignaling = (
 
     ws.on("message", async (data) => {
       if (Buffer.byteLength(String(data)) > MAX_MESSAGE_BYTES) return;
-      const parsed = gamepadDriverClientMessageSchema.safeParse(parseJson(data));
+      const parsed = kapulaDriverClientMessageSchema.safeParse(parseJson(data));
       if (!parsed.success) return;
       const msg = parsed.data;
       if (countsAsActivity(msg.type)) runtimes.touchActivity(runtime);
@@ -253,7 +253,7 @@ export const createSignaling = (
           }
         }
       } catch (e) {
-        logger.error("[gamepad] driver message failed", e);
+        logger.error("[kapula] driver message failed", e);
       }
     });
 
@@ -279,14 +279,14 @@ export const createSignaling = (
           applyStateChange(runtime, "paused", "driver_disconnected");
         }
       } catch (e) {
-        logger.error("[gamepad] driver disconnect bookkeeping failed", e);
+        logger.error("[kapula] driver disconnect bookkeeping failed", e);
       }
     });
   };
 
   const handlePlayerConnection = async (
     ws: WebSocket,
-    session: GamepadSessionRecord,
+    session: KapulaSessionRecord,
     playerToken: string,
   ) => {
     const player = await store.getActivePlayerByToken(playerToken);
@@ -331,7 +331,7 @@ export const createSignaling = (
     };
     ws.on("message", async (data) => {
       if (Buffer.byteLength(String(data)) > MAX_MESSAGE_BYTES) return;
-      const parsed = gamepadPlayerClientMessageSchema.safeParse(parseJson(data));
+      const parsed = kapulaPlayerClientMessageSchema.safeParse(parseJson(data));
       if (!parsed.success) return;
       const msg = parsed.data;
       if (countsAsActivity(msg.type)) runtimes.touchActivity(runtime);
@@ -496,7 +496,7 @@ export const createSignaling = (
           }
         }
       } catch (e) {
-        logger.error("[gamepad] player message failed", e);
+        logger.error("[kapula] player message failed", e);
       }
     });
 
@@ -561,7 +561,7 @@ export const createSignaling = (
     // one, so a silent socket is gone within two ticks. Browsers, Node's
     // built-in WebSocket and the `ws` package all answer a ping frame
     // automatically, so this needs nothing from the clients. The phone
-    // additionally sends an application-level `ping` (useGamepadSocket) to
+    // additionally sends an application-level `ping` (useKapulaSocket) to
     // keep proxies from dropping an idle socket in a quiet lobby.
     const answeredLastPing = new WeakSet<WebSocket>();
     const keepalive = setInterval(() => {
@@ -584,11 +584,11 @@ export const createSignaling = (
       .then((count) => {
         if (count > 0) {
           logger.info(
-            `[gamepad] ${count} session(s) waiting for their driver after restart`,
+            `[kapula] ${count} session(s) waiting for their driver after restart`,
           );
         }
       })
-      .catch((e) => logger.error("[gamepad] boot driver bookkeeping failed", e));
+      .catch((e) => logger.error("[kapula] boot driver bookkeeping failed", e));
 
     server.on("upgrade", (request, socket, head) => {
       const host = request.headers.host ?? "localhost";
@@ -610,7 +610,7 @@ export const createSignaling = (
     wss.on("connection", async (ws: WebSocket, req: IncomingMessage) => {
       // Socket-level failures (protocol violations, frames over maxPayload,
       // network resets) emit 'error'; without a listener they crash the process.
-      ws.on("error", (e) => logger.debug("[gamepad] socket error", e));
+      ws.on("error", (e) => logger.debug("[kapula] socket error", e));
 
       // Fresh sockets count as answered until the first ping goes out.
       answeredLastPing.add(ws);
@@ -669,7 +669,7 @@ export const createSignaling = (
 
         ws.close(4000, "Invalid role");
       } catch (e) {
-        logger.error("[gamepad] connection setup failed", e);
+        logger.error("[kapula] connection setup failed", e);
         ws.close(4000, "Internal error");
       }
     });

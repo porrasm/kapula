@@ -1,21 +1,21 @@
 import { test, expect } from "@playwright/test";
 import {
-  GAMEPAD_PROTOCOL_VERSION,
+  KAPULA_PROTOCOL_VERSION,
   GENERIC_GAMEPAD_SCHEMA,
-  gamepadDriverClientMessageSchema,
-  gamepadDriverSetupRequestSchema,
-  gamepadLinkedEmailsSchema,
-  GAMEPAD_DRIVER_KEY_MAX_LINKED_EMAILS,
-  gamepadPlayerClientMessageSchema,
-  gamepadServerMessageSchema,
-  gamepadSessionConfigSchema,
-  gamepadSessionSnapshotSchema,
+  kapulaDriverClientMessageSchema,
+  kapulaDriverSetupRequestSchema,
+  kapulaLinkedEmailsSchema,
+  KAPULA_DRIVER_KEY_MAX_LINKED_EMAILS,
+  kapulaPlayerClientMessageSchema,
+  kapulaServerMessageSchema,
+  kapulaSessionConfigSchema,
+  kapulaSessionSnapshotSchema,
 } from "@kapula/protocol";
 
 /**
  * Wire-contract tests for the WebSocket message schemas. The signaling server
  * silently drops any client frame these reject, and the protocol-level e2e
- * suite asserts every server frame parses with gamepadServerMessageSchema —
+ * suite asserts every server frame parses with kapulaServerMessageSchema —
  * so this file pins down exactly what is in and out of the contract.
  */
 
@@ -25,8 +25,8 @@ const rejects = (schema: { safeParse: (v: unknown) => { success: boolean } }) =>
   (value: unknown) => expect(schema.safeParse(value).success).toBe(false);
 
 test.describe("player client messages", () => {
-  const ok = accepts(gamepadPlayerClientMessageSchema);
-  const bad = rejects(gamepadPlayerClientMessageSchema);
+  const ok = accepts(kapulaPlayerClientMessageSchema);
+  const bad = rejects(kapulaPlayerClientMessageSchema);
 
   test("accepts every documented message", () => {
     ok({ type: "ping" });
@@ -87,8 +87,8 @@ test.describe("player client messages", () => {
 });
 
 test.describe("driver client messages", () => {
-  const ok = accepts(gamepadDriverClientMessageSchema);
-  const bad = rejects(gamepadDriverClientMessageSchema);
+  const ok = accepts(kapulaDriverClientMessageSchema);
+  const bad = rejects(kapulaDriverClientMessageSchema);
 
   test("accepts lifecycle commands and message relays", () => {
     ok({ type: "ping" });
@@ -115,8 +115,8 @@ test.describe("driver client messages", () => {
 });
 
 test.describe("server messages", () => {
-  const ok = accepts(gamepadServerMessageSchema);
-  const bad = rejects(gamepadServerMessageSchema);
+  const ok = accepts(kapulaServerMessageSchema);
+  const bad = rejects(kapulaServerMessageSchema);
 
   const player = {
     playerId: "1",
@@ -132,10 +132,10 @@ test.describe("server messages", () => {
     ok({
       type: "snapshot",
       snapshot: {
-        protocolVersion: GAMEPAD_PROTOCOL_VERSION,
+        protocolVersion: KAPULA_PROTOCOL_VERSION,
         sessionId: "1",
         state: "waiting_for_players",
-        config: gamepadSessionConfigSchema.parse({}),
+        config: kapulaSessionConfigSchema.parse({}),
         driverConnected: true,
         players: [player],
       },
@@ -172,7 +172,7 @@ test.describe("server messages", () => {
 
 test.describe("driver setup request", () => {
   test("omitted config defaults to a single generic schema", () => {
-    const parsed = gamepadDriverSetupRequestSchema.parse({
+    const parsed = kapulaDriverSetupRequestSchema.parse({
       setupCode: "abc234",
     });
     expect(parsed.setupCode).toBe("ABC234"); // normalized
@@ -182,7 +182,7 @@ test.describe("driver setup request", () => {
   });
 
   test("rejects invalid codes and configs", () => {
-    const bad = rejects(gamepadDriverSetupRequestSchema);
+    const bad = rejects(kapulaDriverSetupRequestSchema);
     bad({});
     bad({ setupCode: "ABC10I" }); // ambiguous characters
     bad({ setupCode: "ABC234", config: { minPlayers: 3, maxPlayers: 2 } });
@@ -190,7 +190,7 @@ test.describe("driver setup request", () => {
 });
 
 test.describe("session config boundaries", () => {
-  const bad = rejects(gamepadSessionConfigSchema);
+  const bad = rejects(kapulaSessionConfigSchema);
 
   const controls = (n: number) =>
     Array.from({ length: n }, (_, i) => ({
@@ -206,7 +206,7 @@ test.describe("session config boundaries", () => {
     }));
 
   test("player counts are capped at 12", () => {
-    expect(gamepadSessionConfigSchema.parse({ maxPlayers: 12 }).maxPlayers).toBe(12);
+    expect(kapulaSessionConfigSchema.parse({ maxPlayers: 12 }).maxPlayers).toBe(12);
     bad({ maxPlayers: 13 });
     bad({ minPlayers: 0 });
     bad({ minPlayers: 13, maxPlayers: 12 });
@@ -214,14 +214,14 @@ test.describe("session config boundaries", () => {
 
   test("schema and control list sizes are bounded", () => {
     expect(
-      gamepadSessionConfigSchema.parse({ schemas: schemas(32) }).schemas,
+      kapulaSessionConfigSchema.parse({ schemas: schemas(32) }).schemas,
     ).toHaveLength(32);
     bad({ schemas: [] });
     bad({ schemas: schemas(33) });
     bad({ schemas: [{ id: "s", name: "S", controls: [] }] });
     bad({ schemas: [{ id: "s", name: "S", controls: controls(17) }] });
     expect(
-      gamepadSessionConfigSchema.parse({
+      kapulaSessionConfigSchema.parse({
         schemas: [{ id: "s", name: "S", controls: controls(16) }],
       }).schemas[0].controls,
     ).toHaveLength(16);
@@ -251,7 +251,7 @@ test.describe("session config boundaries", () => {
       schemas: [{ id: "s", name: "S", controls: [{ type: "button", id: "b" }] }],
     });
     expect(
-      gamepadSessionConfigSchema.safeParse({
+      kapulaSessionConfigSchema.safeParse({
         schemas: [{ id: "s", name: "S", controls: [{ type: "joystick", id: "j" }] }],
       }).success,
     ).toBe(true);
@@ -262,18 +262,18 @@ test.describe("session config boundaries", () => {
 test.describe("session snapshot", () => {
   test("round-trips a realistic snapshot", () => {
     const snapshot = {
-      protocolVersion: GAMEPAD_PROTOCOL_VERSION,
+      protocolVersion: KAPULA_PROTOCOL_VERSION,
       sessionId: "17",
       state: "in_progress",
-      config: gamepadSessionConfigSchema.parse({ game: "Tanks" }),
+      config: kapulaSessionConfigSchema.parse({ game: "Tanks" }),
       driverConnected: false,
       players: [],
     };
-    expect(gamepadSessionSnapshotSchema.parse(snapshot).state).toBe(
+    expect(kapulaSessionSnapshotSchema.parse(snapshot).state).toBe(
       "in_progress",
     );
     expect(
-      gamepadSessionSnapshotSchema.safeParse({ ...snapshot, state: "nope" })
+      kapulaSessionSnapshotSchema.safeParse({ ...snapshot, state: "nope" })
         .success,
     ).toBe(false);
   });
@@ -281,13 +281,13 @@ test.describe("session snapshot", () => {
 
 test.describe("private sessions and linked emails", () => {
   test("private defaults off", () => {
-    expect(gamepadSessionConfigSchema.parse({}).private).toBe(false);
-    expect(gamepadSessionConfigSchema.parse({ private: true }).private).toBe(true);
+    expect(kapulaSessionConfigSchema.parse({}).private).toBe(false);
+    expect(kapulaSessionConfigSchema.parse({ private: true }).private).toBe(true);
   });
 
   test("linked emails are trimmed, lowercased and deduplicated", () => {
     expect(
-      gamepadLinkedEmailsSchema.parse([
+      kapulaLinkedEmailsSchema.parse([
         " Partner@Example.com ",
         "partner@example.com",
         "me@example.org",
@@ -296,12 +296,12 @@ test.describe("private sessions and linked emails", () => {
   });
 
   test("anything but emails, or too many, is refused", () => {
-    expect(gamepadLinkedEmailsSchema.safeParse(["not an email"]).success).toBe(false);
-    expect(gamepadLinkedEmailsSchema.safeParse([""]).success).toBe(false);
+    expect(kapulaLinkedEmailsSchema.safeParse(["not an email"]).success).toBe(false);
+    expect(kapulaLinkedEmailsSchema.safeParse([""]).success).toBe(false);
     const many = Array.from(
-      { length: GAMEPAD_DRIVER_KEY_MAX_LINKED_EMAILS + 1 },
+      { length: KAPULA_DRIVER_KEY_MAX_LINKED_EMAILS + 1 },
       (_, i) => `p${i}@example.com`,
     );
-    expect(gamepadLinkedEmailsSchema.safeParse(many).success).toBe(false);
+    expect(kapulaLinkedEmailsSchema.safeParse(many).success).toBe(false);
   });
 });

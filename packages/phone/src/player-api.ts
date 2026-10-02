@@ -1,15 +1,15 @@
 import { useMemo } from "react";
 import type {
-  GamepadJoinInfo,
-  GamepadJoinRequest,
-  GamepadJoinResult,
-  GamepadPlayerStatus,
+  KapulaJoinInfo,
+  KapulaJoinRequest,
+  KapulaJoinResult,
+  KapulaPlayerStatus,
 } from "@kapula/protocol";
 import { useKapulaConfig } from "./config.js";
 
 /**
  * The phone's HTTP surface: three JSON routes under the Kapula API base
- * (see GAMEPAD.md "Player HTTP API"). Plain fetch, no account — so the
+ * (see KAPULA.md "Player HTTP API"). Plain fetch, no account — so the
  * player screens work wherever the server is hosted; the base comes from
  * the host's `KapulaPlayerConfig`.
  */
@@ -29,9 +29,9 @@ const unwrap = async <T>(res: Response): Promise<T> => {
 };
 
 export type PlayerApi = {
-  fetchJoinInfo: (joinCode: string) => Promise<GamepadJoinInfo | null>;
-  joinSession: (request: GamepadJoinRequest) => Promise<GamepadJoinResult>;
-  fetchPlayerStatus: (token: string) => Promise<GamepadPlayerStatus | null>;
+  fetchJoinInfo: (joinCode: string) => Promise<KapulaJoinInfo | null>;
+  joinSession: (request: KapulaJoinRequest) => Promise<KapulaJoinResult>;
+  fetchPlayerStatus: (token: string) => Promise<KapulaPlayerStatus | null>;
 };
 
 export const createPlayerApi = (apiBase: string): PlayerApi => {
@@ -47,17 +47,17 @@ export const createPlayerApi = (apiBase: string): PlayerApi => {
       const res = await fetch(
         `${apiBase}/join-info/${encodeURIComponent(joinCode)}`,
       );
-      return (await unwrap<{ info: GamepadJoinInfo | null }>(res)).info;
+      return (await unwrap<{ info: KapulaJoinInfo | null }>(res)).info;
     },
     joinSession: async (request) => {
       const res = await postJson("/join", request);
       const { sessionId, playerId, playerToken } =
-        await unwrap<GamepadJoinResult>(res);
+        await unwrap<KapulaJoinResult>(res);
       return { sessionId, playerId, playerToken };
     },
     fetchPlayerStatus: async (token) => {
       const res = await postJson("/player/status", { token });
-      return (await unwrap<{ status: GamepadPlayerStatus | null }>(res)).status;
+      return (await unwrap<{ status: KapulaPlayerStatus | null }>(res)).status;
     },
   };
 };

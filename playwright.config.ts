@@ -14,8 +14,8 @@ export const HOST_URL = process.env.PW_HOST_URL ?? `http://localhost:${HOST_PORT
  * environment configures both sides.
  */
 const E2E_ENV = {
-  GAMEPAD_DRIVER_LOST_TIMEOUT_MS: process.env.GAMEPAD_DRIVER_LOST_TIMEOUT_MS ?? "6000",
-  GAMEPAD_WS_KEEPALIVE_MS: process.env.GAMEPAD_WS_KEEPALIVE_MS ?? "2000",
+  KAPULA_DRIVER_LOST_TIMEOUT_MS: process.env.KAPULA_DRIVER_LOST_TIMEOUT_MS ?? "6000",
+  KAPULA_WS_KEEPALIVE_MS: process.env.KAPULA_WS_KEEPALIVE_MS ?? "2000",
 };
 Object.assign(process.env, E2E_ENV);
 

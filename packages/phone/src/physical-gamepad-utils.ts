@@ -1,8 +1,8 @@
 import {
   PHYSICAL_GAMEPAD_CONTROLS,
   PHYSICAL_GAMEPAD_DPAD_BUTTONS,
-  type GamepadDpadDirection,
-  type GamepadInputValue,
+  type KapulaDpadDirection,
+  type KapulaInputValue,
 } from "@kapula/protocol";
 import { roundAxis } from "./axis-utils.js";
 
@@ -47,7 +47,7 @@ const pressed = (reading: GamepadReading, index: number): boolean =>
   reading.buttons[index]?.pressed === true;
 
 /** Folds the four standard-mapping dpad buttons into one direction code. */
-export const dpadDirection = (reading: GamepadReading): GamepadDpadDirection => {
+export const dpadDirection = (reading: GamepadReading): KapulaDpadDirection => {
   const up = pressed(reading, PHYSICAL_GAMEPAD_DPAD_BUTTONS.up);
   const down = pressed(reading, PHYSICAL_GAMEPAD_DPAD_BUTTONS.down);
   const left = pressed(reading, PHYSICAL_GAMEPAD_DPAD_BUTTONS.left);
@@ -55,7 +55,7 @@ export const dpadDirection = (reading: GamepadReading): GamepadDpadDirection => 
   // Opposite buttons cancel out, like a real hat switch.
   const v = up === down ? "" : up ? "u" : "d";
   const h = left === right ? "" : left ? "l" : "r";
-  return ((v + h) || "c") as GamepadDpadDirection;
+  return ((v + h) || "c") as KapulaDpadDirection;
 };
 
 /** A trigger's analog pull in [0, 1]; digital-only triggers read 0 or 1. */
@@ -74,8 +74,8 @@ const triggerValue = (reading: GamepadReading, index: number): number => {
  */
 export const readPhysicalGamepad = (
   reading: GamepadReading,
-): Record<string, GamepadInputValue> => {
-  const controls: Record<string, GamepadInputValue> = {};
+): Record<string, KapulaInputValue> => {
+  const controls: Record<string, KapulaInputValue> = {};
   for (const control of PHYSICAL_GAMEPAD_CONTROLS) {
     switch (control.kind) {
       case "stick": {
@@ -101,10 +101,10 @@ export const readPhysicalGamepad = (
 };
 
 /** Everything a controller reads when it is unplugged or not yet touched. */
-export const IDLE_PHYSICAL_GAMEPAD: Record<string, GamepadInputValue> =
+export const IDLE_PHYSICAL_GAMEPAD: Record<string, KapulaInputValue> =
   readPhysicalGamepad({ buttons: [], axes: [] });
 
-const sameValue = (a: GamepadInputValue, b: GamepadInputValue): boolean => {
+const sameValue = (a: KapulaInputValue, b: KapulaInputValue): boolean => {
   if (typeof a !== "object" || typeof b !== "object") return a === b;
   const ax = "x" in a ? a.x : undefined;
   const bx = "x" in b ? b.x : undefined;
@@ -115,8 +115,8 @@ const sameValue = (a: GamepadInputValue, b: GamepadInputValue): boolean => {
 
 /** True when two mapped states would produce identical input frames. */
 export const samePhysicalControls = (
-  a: Record<string, GamepadInputValue>,
-  b: Record<string, GamepadInputValue>,
+  a: Record<string, KapulaInputValue>,
+  b: Record<string, KapulaInputValue>,
 ): boolean =>
   PHYSICAL_GAMEPAD_CONTROLS.every((control) => {
     const x = a[control.id];
@@ -130,8 +130,8 @@ export const samePhysicalControls = (
  * flush immediately; stick and trigger movement rides the ~30 fps throttle.
  */
 export const diffPhysicalControls = (
-  prev: Record<string, GamepadInputValue>,
-  next: Record<string, GamepadInputValue>,
+  prev: Record<string, KapulaInputValue>,
+  next: Record<string, KapulaInputValue>,
 ): { immediate: string[]; throttled: string[] } => {
   const immediate: string[] = [];
   const throttled: string[] = [];

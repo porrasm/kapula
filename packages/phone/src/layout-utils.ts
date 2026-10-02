@@ -1,11 +1,11 @@
 import type {
   ControlSchema,
-  GamepadControl,
-  GamepadControlZone,
-  GamepadDpadDirection,
-  GamepadGyroControl,
-  GamepadMotionControl,
-  GamepadRawControl,
+  KapulaControl,
+  KapulaControlZone,
+  KapulaDpadDirection,
+  KapulaGyroControl,
+  KapulaMotionControl,
+  KapulaRawControl,
 } from "@kapula/protocol";
 
 /**
@@ -14,7 +14,7 @@ import type {
  * Kept free of React and the DOM so unit tests can assert real geometry
  * (bounds, overlaps) directly.
  *
- * Three inputs decide where a control goes (see GAMEPAD.md):
+ * Three inputs decide where a control goes (see KAPULA.md):
  * - Optional driver positions: per-control `x` / `y`, the center as a
  *   percentage of the viewport's width / height. These are exact — applied
  *   after the draft below, per axis, and only clamped so the box stays
@@ -47,7 +47,7 @@ export type Viewport = { width: number; height: number };
 export type ControlRole = "stick" | "primary" | "shoulder" | "aux";
 
 export type ResolvedControl = {
-  control: GamepadControl;
+  control: KapulaControl;
   role: ControlRole;
   /** Center of the control in px from the container's top-left. */
   x: number;
@@ -65,7 +65,7 @@ const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
 
 // Sectors counter-clockwise from screen-right in 45° steps (y is down).
-const DPAD_SECTORS: readonly GamepadDpadDirection[] = [
+const DPAD_SECTORS: readonly KapulaDpadDirection[] = [
   "r",
   "dr",
   "d",
@@ -88,7 +88,7 @@ export const pointToDpadDirection = (
   dx: number,
   dy: number,
   radius: number,
-): GamepadDpadDirection => {
+): KapulaDpadDirection => {
   if (Math.hypot(dx, dy) < radius * DPAD_DEADZONE) return "c";
   const degrees = (Math.atan2(dy, dx) * 180) / Math.PI;
   const sector = Math.round(((degrees + 360) % 360) / 45) % 8;
@@ -140,34 +140,34 @@ const SIZE_FACTOR = { small: 0.8, medium: 1, large: 1.2 } as const;
  * it (the Controller draws it). None of them take hints.
  */
 const isSensor = (
-  control: GamepadControl,
-): control is GamepadGyroControl | GamepadMotionControl | GamepadRawControl =>
+  control: KapulaControl,
+): control is KapulaGyroControl | KapulaMotionControl | KapulaRawControl =>
   control.type === "gyro" || control.type === "motion" || control.type === "raw";
 
-const sizeFactor = (control: GamepadControl): number =>
+const sizeFactor = (control: KapulaControl): number =>
   isSensor(control) ? 1 : SIZE_FACTOR[control.size ?? "medium"];
 
-const zoneOf = (control: GamepadControl): GamepadControlZone | undefined =>
+const zoneOf = (control: KapulaControl): KapulaControlZone | undefined =>
   isSensor(control) ? undefined : control.zone;
 
 /**
  * Controls the engine places in stick slots: joysticks, and touchpads, which
  * are a stick's size and belong under a thumb just the same.
  */
-const isStickLike = (control: GamepadControl): boolean =>
+const isStickLike = (control: KapulaControl): boolean =>
   control.type === "joystick" || control.type === "touchpad";
 
 /**
  * Controls the engine places as buttons: buttons, and `text` controls,
  * which are a button that opens the keyboard.
  */
-const isButtonLike = (control: GamepadControl): boolean =>
+const isButtonLike = (control: KapulaControl): boolean =>
   control.type === "button" || control.type === "text";
 
 /** A touchpad is drawn bigger than a stick of the same slot and hint. */
 const TOUCHPAD_SCALE = 1.3;
 
-const stickScale = (control: GamepadControl): number =>
+const stickScale = (control: KapulaControl): number =>
   sizeFactor(control) * (control.type === "touchpad" ? TOUCHPAD_SCALE : 1);
 
 export type OrientationLock = "landscape" | "portrait" | null;
@@ -198,7 +198,7 @@ export const needsLandscape = (schema: ControlSchema): boolean =>
  * height follows, so the aspect is never bent.
  */
 const stickDims = (
-  control: GamepadControl,
+  control: KapulaControl,
   d: number,
   maxWidth: number,
 ): { width: number; height: number } => {
@@ -241,7 +241,7 @@ export const canCustomizeLayout = (
   schema.controls.some((c) => !isSensor(c));
 
 /** Whether the driver pinned this control's center on either axis. */
-export const hasDriverPosition = (control: GamepadControl): boolean =>
+export const hasDriverPosition = (control: KapulaControl): boolean =>
   !isSensor(control) && (control.x !== undefined || control.y !== undefined);
 
 /**
@@ -286,16 +286,16 @@ const landscapeLayout = (
 
   // --- Buttons into clusters: hinted ones claim their zone (with the
   // documented overflow), the rest flow through the array-order heuristic.
-  const diamond: Record<"left" | "right", GamepadControl[]> = {
+  const diamond: Record<"left" | "right", KapulaControl[]> = {
     left: [],
     right: [],
   };
-  const shoulders: Record<"left" | "right", GamepadControl[]> = {
+  const shoulders: Record<"left" | "right", KapulaControl[]> = {
     left: [],
     right: [],
   };
-  const aux: GamepadControl[] = [];
-  const unhinted: GamepadControl[] = [];
+  const aux: KapulaControl[] = [];
+  const unhinted: KapulaControl[] = [];
   for (const control of buttons) {
     const zone = zoneOf(control);
     if (zone === "left" || zone === "right") {
@@ -320,9 +320,9 @@ const landscapeLayout = (
   // is off-limits: the diamond sits there (lifted above that side's stick).
   const upperFree = (side: "left" | "right") => diamond[side].length === 0;
   type Slot = "bl" | "br" | "ul" | "ur" | "extra";
-  const corner: Partial<Record<"bl" | "br" | "ul" | "ur", GamepadControl>> = {};
-  const extraSticks: GamepadControl[] = [];
-  const slotPrefs = (control: GamepadControl): Slot[] => {
+  const corner: Partial<Record<"bl" | "br" | "ul" | "ur", KapulaControl>> = {};
+  const extraSticks: KapulaControl[] = [];
+  const slotPrefs = (control: KapulaControl): Slot[] => {
     switch (zoneOf(control)) {
       case "left":
         return ["bl", "ul", "extra"];
@@ -356,9 +356,9 @@ const landscapeLayout = (
   const shoulderBase = clamp(w * 0.11, 64, 96);
   // A "large" pill is a primary action on the index finger (a shoulder fire
   // button), not a modifier: it gets a taller, wider pill than the row.
-  const isLargeButton = (control: GamepadControl) =>
+  const isLargeButton = (control: KapulaControl) =>
     isButtonLike(control) && !isSensor(control) && control.size === "large";
-  const pillHeight = (control: GamepadControl) =>
+  const pillHeight = (control: KapulaControl) =>
     isLargeButton(control) ? clamp(h * 0.19, 44, 72) : shoulderH;
   let shoulderExtent = pad;
   let topRowsBottom = pad;
@@ -420,7 +420,7 @@ const landscapeLayout = (
     sticks.length > 1 ? clamp(h * 0.4, 110, 180) : clamp(h * 0.44, 120, 200);
   const smallBase = clamp(h * 0.26, 72, 112);
   const stick = (
-    control: GamepadControl,
+    control: KapulaControl,
     x: number,
     y: number,
     d: number,
@@ -435,11 +435,11 @@ const landscapeLayout = (
   // What a bottom-corner stick is anchored by: its slot (a single-axis pill
   // sits centered in the d×d slot, as it always has), or a touchpad's own
   // box, so a wide or tall pad still sits flush in the corner.
-  const cornerDims = (control: GamepadControl, d: number) =>
+  const cornerDims = (control: KapulaControl, d: number) =>
     control.type === "touchpad"
       ? stickDims(control, d, w / 2 - pad)
       : { width: d, height: d };
-  const stickD = (control: GamepadControl, base: number) =>
+  const stickD = (control: KapulaControl, base: number) =>
     clamp(base * stickScale(control), 64, h - 2 * pad);
   let bl: ResolvedControl | undefined;
   let br: ResolvedControl | undefined;
@@ -479,7 +479,7 @@ const landscapeLayout = (
   // A lone button under a thumb is that thumb's whole job (a fire button):
   // it gets the biggest base - bigger still when no stick shares the thumb -
   // and sits in the corner itself rather than at a diamond's center.
-  const primaryBase = (group: GamepadControl[], bottom?: ResolvedControl) =>
+  const primaryBase = (group: KapulaControl[], bottom?: ResolvedControl) =>
     group.length === 1
       ? !bottom && sticks.length <= 1
         ? clamp(h * 0.34, 72, 150)
@@ -499,7 +499,7 @@ const landscapeLayout = (
     (diamond.left.length ? 1 : 0) + (diamond.right.length ? 1 : 0);
   // Horizontal room a cluster needs: a lone button its own width, a diamond
   // 2 * (max*0.78 + 4 + max/2) = 2.56*max + 8.
-  const clusterNeed = (group: GamepadControl[], max: number) =>
+  const clusterNeed = (group: KapulaControl[], max: number) =>
     group.length === 0 ? 0 : group.length === 1 ? max : 2.56 * max + 8;
   if (sidesUsed > 0) {
     const maxL = diamond.left.length ? Math.max(...diamondSizes.left) : 0;

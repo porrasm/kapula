@@ -5,8 +5,8 @@ import {
   type APIRequestContext,
 } from "@playwright/test";
 import {
-  GAMEPAD_CODE_ALPHABET,
-  GAMEPAD_PROTOCOL_VERSION,
+  KAPULA_CODE_ALPHABET,
+  KAPULA_PROTOCOL_VERSION,
   PHYSICAL_GAMEPAD_SCHEMA_ID,
 } from "@kapula/protocol";
 import { HOST_URL } from "../../playwright.config";
@@ -29,7 +29,7 @@ import {
 /**
  * Protocol-level WebSocket tests: no browser, just the documented driver HTTP
  * API, the host and player JSON APIs and raw WebSocket connections for all
- * three roles. Complements gamepad.spec.ts, which drives the real frontend.
+ * three roles. Complements browser.spec.ts, which drives the real frontend.
  *
  * NOTE: /api/gamepad/driver/setup is rate limited (10/min per bucket). The
  * driverSetup helper scopes every call to its own dev-only bucket (the
@@ -44,7 +44,7 @@ const newContext = () =>
     ignoreHTTPSErrors: true,
   });
 
-const CODE_PATTERN = new RegExp(`^[${GAMEPAD_CODE_ALPHABET}]{6}$`);
+const CODE_PATTERN = new RegExp(`^[${KAPULA_CODE_ALPHABET}]{6}$`);
 
 test.describe("connection validation and close codes", () => {
   test("unknown or missing role closes with 4000", async () => {
@@ -200,7 +200,7 @@ test.describe.serial("full protocol flow over one session", () => {
   });
 
   test("driver setup: response fields, no owner auto-join, single-use code", async () => {
-    expect(setupBody.protocolVersion).toBe(GAMEPAD_PROTOCOL_VERSION);
+    expect(setupBody.protocolVersion).toBe(KAPULA_PROTOCOL_VERSION);
     expect(setupBody.sessionId).toBe(sessionId);
     expect(joinCode).toMatch(CODE_PATTERN);
     expect(setupBody.joinUrl).toContain(`join/${joinCode}`);
@@ -1628,7 +1628,7 @@ test.describe.serial("driver keys", () => {
       config: { game: "Keyed Game", minPlayers: 1 },
     });
     expect(created.status).toBe(200);
-    expect(created.body.protocolVersion).toBe(GAMEPAD_PROTOCOL_VERSION);
+    expect(created.body.protocolVersion).toBe(KAPULA_PROTOCOL_VERSION);
     expect(created.body.joinCode).toMatch(CODE_PATTERN);
 
     // The owner sees it in their session list, under the key's name — a
@@ -1852,14 +1852,14 @@ test.describe.serial("private sessions", () => {
  * and terminates a socket that did not answer the previous ping, so a client
  * whose network died silently stops holding a driver or player slot. The real
  * interval is 30 s; this runs only against a backend booted with a short
- * GAMEPAD_WS_KEEPALIVE_MS (the same value must be in this process's
+ * KAPULA_WS_KEEPALIVE_MS (the same value must be in this process's
  * environment so the test knows how long to wait).
  */
 test.describe.serial("websocket keepalive", () => {
-  const intervalMs = Number(process.env.GAMEPAD_WS_KEEPALIVE_MS);
+  const intervalMs = Number(process.env.KAPULA_WS_KEEPALIVE_MS);
   test.skip(
     !Number.isFinite(intervalMs) || intervalMs <= 0 || intervalMs > 5_000,
-    "set GAMEPAD_WS_KEEPALIVE_MS (<= 5000) on the host and here",
+    "set KAPULA_WS_KEEPALIVE_MS (<= 5000) on the host and here",
   );
 
   let ctx: APIRequestContext;
@@ -1913,14 +1913,14 @@ test.describe.serial("websocket keepalive", () => {
  * The driver-lost watchdog: a session without its driver for the timeout
  * ends for everyone with reason driver_lost. The real timeout is 3 minutes;
  * this runs only against a backend booted with a short
- * GAMEPAD_DRIVER_LOST_TIMEOUT_MS (the same value must be in this process's
+ * KAPULA_DRIVER_LOST_TIMEOUT_MS (the same value must be in this process's
  * environment so the test knows how long to wait).
  */
 test.describe.serial("driver-lost watchdog", () => {
-  const timeoutMs = Number(process.env.GAMEPAD_DRIVER_LOST_TIMEOUT_MS);
+  const timeoutMs = Number(process.env.KAPULA_DRIVER_LOST_TIMEOUT_MS);
   test.skip(
     !Number.isFinite(timeoutMs) || timeoutMs <= 0 || timeoutMs > 20_000,
-    "set GAMEPAD_DRIVER_LOST_TIMEOUT_MS (<= 20000) on the host and here",
+    "set KAPULA_DRIVER_LOST_TIMEOUT_MS (<= 20000) on the host and here",
   );
 
   let ctx: APIRequestContext;
@@ -2151,7 +2151,7 @@ test.describe("driver setup endpoint validation", () => {
       );
       expect(unsupported.status).toBe(400);
       expect(unsupported.body.error).toContain("Unsupported protocol version");
-      expect(unsupported.body.supported).toEqual([GAMEPAD_PROTOCOL_VERSION]);
+      expect(unsupported.body.supported).toEqual([KAPULA_PROTOCOL_VERSION]);
 
       // Asking for the current version is the same as not asking.
       const ok = await driverSetup(
@@ -2159,10 +2159,10 @@ test.describe("driver setup endpoint validation", () => {
         created.setupCode,
         undefined,
         undefined,
-        GAMEPAD_PROTOCOL_VERSION,
+        KAPULA_PROTOCOL_VERSION,
       );
       expect(ok.status).toBe(200);
-      expect(ok.body.protocolVersion).toBe(GAMEPAD_PROTOCOL_VERSION);
+      expect(ok.body.protocolVersion).toBe(KAPULA_PROTOCOL_VERSION);
 
       // ...and the version is in the snapshot too, for a driver that
       // reconnects without the setup response it once got. Connect through
@@ -2174,7 +2174,7 @@ test.describe("driver setup endpoint validation", () => {
       try {
         const snap = await driver.waitForType("snapshot");
         expect((snap.snapshot as any).protocolVersion).toBe(
-          GAMEPAD_PROTOCOL_VERSION,
+          KAPULA_PROTOCOL_VERSION,
         );
       } finally {
         driver.close();
@@ -2186,7 +2186,7 @@ test.describe("driver setup endpoint validation", () => {
 });
 
 test.describe("wire contract", () => {
-  test("every message the server sent matched gamepadServerMessageSchema", () => {
+  test("every message the server sent matched kapulaServerMessageSchema", () => {
     for (const client of allClients) {
       expect
         .soft(client.invalidMessages, `invalid frames on [${client.label}]`)

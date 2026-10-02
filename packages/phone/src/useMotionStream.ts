@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import type { GamepadMotionControl, GamepadPlayerClientMessage } from "@kapula/protocol";
-import { GAMEPAD_MOTION_BATCH_MAX } from "@kapula/protocol";
+import type { KapulaMotionControl, KapulaPlayerClientMessage } from "@kapula/protocol";
+import { KAPULA_MOTION_BATCH_MAX } from "@kapula/protocol";
 import {
   MOTION_BATCH_SIZE,
   MOTION_FLUSH_MS,
@@ -30,9 +30,9 @@ export const useMotionStream = ({
   enabled,
   send,
 }: {
-  control: GamepadMotionControl | undefined;
+  control: KapulaMotionControl | undefined;
   enabled: boolean;
-  send: (msg: GamepadPlayerClientMessage) => void;
+  send: (msg: KapulaPlayerClientMessage) => void;
 }): { access: GyroAccess } => {
   const access = useGyroAccess();
 
@@ -59,11 +59,11 @@ export const useMotionStream = ({
       // Samples held while the sign settled may exceed one message.
       const batch = pending;
       pending = [];
-      for (let i = 0; i < batch.length; i += GAMEPAD_MOTION_BATCH_MAX) {
+      for (let i = 0; i < batch.length; i += KAPULA_MOTION_BATCH_MAX) {
         send({
           type: "motion",
           samples: batch
-            .slice(i, i + GAMEPAD_MOTION_BATCH_MAX)
+            .slice(i, i + KAPULA_MOTION_BATCH_MAX)
             .map((raw) => encodeMotionSample(raw, settled)),
         });
       }
@@ -83,7 +83,7 @@ export const useMotionStream = ({
         if (expectedUp) estimator.observe(raw.accel, expectedUp);
         sign = estimator.sign;
         // Cap what the settling phase can hold back.
-        if (pending.length >= GAMEPAD_MOTION_BATCH_MAX * 2) pending.shift();
+        if (pending.length >= KAPULA_MOTION_BATCH_MAX * 2) pending.shift();
       }
       pending.push(raw);
       if (sign === null) return;

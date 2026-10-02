@@ -10,19 +10,19 @@ import {
   type DebugInputs,
 } from "@kapula/phone/utils";
 import {
-  GAMEPAD_PROTOCOL_VERSION,
-  gamepadSessionConfigSchema,
+  KAPULA_PROTOCOL_VERSION,
+  kapulaSessionConfigSchema,
 } from "@kapula/protocol";
-import type { GamepadSessionSnapshot } from "@kapula/protocol";
+import type { KapulaSessionSnapshot } from "@kapula/protocol";
 
 const inputMsg = (playerId: string, seq: number) =>
   ({ type: "input", playerId, seq, controls: { fire: seq % 2 === 0 } }) as const;
 
-const snapshot: GamepadSessionSnapshot = {
-  protocolVersion: GAMEPAD_PROTOCOL_VERSION,
+const snapshot: KapulaSessionSnapshot = {
+  protocolVersion: KAPULA_PROTOCOL_VERSION,
   sessionId: "s1",
   state: "in_progress",
-  config: gamepadSessionConfigSchema.parse({}),
+  config: kapulaSessionConfigSchema.parse({}),
   driverConnected: true,
   players: [
     {
@@ -138,7 +138,7 @@ test.describe("DEBUG_PRESETS", () => {
   // count, label length) or the button produces an instant setup error.
   for (const preset of DEBUG_PRESETS) {
     test(`the ${preset.key} preset passes the session config schema`, () => {
-      const parsed = gamepadSessionConfigSchema.safeParse(preset.config);
+      const parsed = kapulaSessionConfigSchema.safeParse(preset.config);
       expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true);
     });
   }
@@ -149,13 +149,13 @@ test.describe("DEBUG_PRESETS", () => {
  * implementation of the lost-session recovery a real game does.
  */
 test.describe("buildRecoveryConfig", () => {
-  const config = gamepadSessionConfigSchema.parse({
+  const config = kapulaSessionConfigSchema.parse({
     game: "Recover Me",
     minPlayers: 2,
     maxPlayers: 6,
   });
-  const snapshot: GamepadSessionSnapshot = {
-    protocolVersion: GAMEPAD_PROTOCOL_VERSION,
+  const snapshot: KapulaSessionSnapshot = {
+    protocolVersion: KAPULA_PROTOCOL_VERSION,
     sessionId: "s1",
     state: "paused",
     config,
@@ -190,7 +190,7 @@ test.describe("buildRecoveryConfig", () => {
     expect(recovery).not.toHaveProperty("minPlayers");
     expect(recovery).not.toHaveProperty("maxPlayers");
     // It must be a valid setup config, sized to the roster.
-    const parsed = gamepadSessionConfigSchema.parse(recovery);
+    const parsed = kapulaSessionConfigSchema.parse(recovery);
     expect(parsed.minPlayers).toBe(2);
     expect(parsed.maxPlayers).toBe(2);
   });

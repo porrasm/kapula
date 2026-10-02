@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   PHYSICAL_GAMEPAD_SCHEMA_ID,
   type ControlSchema,
-  type GamepadPlayerClientMessage,
-  type GamepadPlayerInfo,
-  type GamepadServerMessage,
-  type GamepadSessionSnapshot,
-  type GamepadStateChangeReason,
+  type KapulaPlayerClientMessage,
+  type KapulaPlayerInfo,
+  type KapulaServerMessage,
+  type KapulaSessionSnapshot,
+  type KapulaStateChangeReason,
 } from "@kapula/protocol";
 import { Button, LoadingState } from "./ui.js";
 import { Controller } from "./Controller.js";
@@ -23,8 +23,8 @@ import { createSeqCounter, type SeqCounter } from "./seq-counter.js";
 import { SessionMenu } from "./SessionMenu.js";
 import { useLayoutOverride } from "./useLayoutOverride.js";
 import { applyServerMessage } from "./snapshot-utils.js";
-import { buildGamepadWsUrl, useKapulaConfig } from "./config.js";
-import { useGamepadSocket } from "./useGamepadSocket.js";
+import { buildKapulaWsUrl, useKapulaConfig } from "./config.js";
+import { useKapulaSocket } from "./useKapulaSocket.js";
 import {
   clearStoredPlayer,
   shouldDiscardStoredPlayer,
@@ -39,7 +39,7 @@ type PlayerSessionProps = {
 };
 
 export const PlayerSession = ({ player, onLeave }: PlayerSessionProps) => {
-  const [snapshot, setSnapshot] = useState<GamepadSessionSnapshot | null>(null);
+  const [snapshot, setSnapshot] = useState<KapulaSessionSnapshot | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   // Bumping the nonce changes the URL, which remounts the socket effect —
   // used by "Use controller here" after another device took the slot over.
@@ -48,7 +48,7 @@ export const PlayerSession = ({ player, onLeave }: PlayerSessionProps) => {
   const { apiBase } = useKapulaConfig();
   const url = useMemo(
     () =>
-      buildGamepadWsUrl(apiBase, {
+      buildKapulaWsUrl(apiBase, {
         role: "player",
         token: player.token,
         r: String(retryNonce),
@@ -58,7 +58,7 @@ export const PlayerSession = ({ player, onLeave }: PlayerSessionProps) => {
 
   // The reason of the last state change, read when the session turns out to
   // be gone (the ended state_changed precedes the 4005 close).
-  const endReasonRef = useRef<GamepadStateChangeReason | null>(null);
+  const endReasonRef = useRef<KapulaStateChangeReason | null>(null);
 
   // One input seq counter for the whole player session: controllers remount
   // on schema switches, and the numbering must not restart with them.
@@ -94,7 +94,7 @@ export const PlayerSession = ({ player, onLeave }: PlayerSessionProps) => {
   // bridging a real controller, so a buzz reaches the right hardware.
   const physicalRef = useRef(false);
 
-  const onMessage = useCallback((msg: GamepadServerMessage) => {
+  const onMessage = useCallback((msg: KapulaServerMessage) => {
     setSnapshot((prev) => applyServerMessage(prev, msg));
     if (msg.type === "state_changed") {
       endReasonRef.current = msg.reason;
@@ -123,7 +123,7 @@ export const PlayerSession = ({ player, onLeave }: PlayerSessionProps) => {
     }
   }, []);
 
-  const { isConnected, fatalClose, send } = useGamepadSocket(url, onMessage);
+  const { isConnected, fatalClose, send } = useKapulaSocket(url, onMessage);
 
   // Everything below renders in position: fixed layers; a leftover window
   // scroll (the lobby's keyboard, a scrolled landing page) would paint them
@@ -284,7 +284,7 @@ const Identity = ({
   me,
   isConnected,
 }: {
-  me: GamepadPlayerInfo | undefined;
+  me: KapulaPlayerInfo | undefined;
   isConnected: boolean;
 }) => (
   <>
@@ -328,14 +328,14 @@ const DriverText = ({
   );
 
 type InGameProps = {
-  snapshot: GamepadSessionSnapshot;
-  me: GamepadPlayerInfo | undefined;
+  snapshot: KapulaSessionSnapshot;
+  me: KapulaPlayerInfo | undefined;
   schema: ControlSchema;
   isConnected: boolean;
   notice: string | null;
   /** The driver's `{ text }` line, shown under the header for a few seconds. */
   driverText: string | null;
-  send: (msg: GamepadPlayerClientMessage) => void;
+  send: (msg: KapulaPlayerClientMessage) => void;
   seq: SeqCounter;
   onLeave: () => void;
 };

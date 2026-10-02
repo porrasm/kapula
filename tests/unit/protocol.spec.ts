@@ -1,21 +1,21 @@
 import { test, expect } from "@playwright/test";
 import {
-  GAMEPAD_DEFAULT_COLORS,
-  GAMEPAD_DPAD_DIRECTIONS,
-  GAMEPAD_GYRO_RANGE_DEFAULT,
-  GAMEPAD_MOTION_BATCH_MAX,
-  GAMEPAD_PROTOCOL_VERSION,
+  KAPULA_DEFAULT_COLORS,
+  KAPULA_DPAD_DIRECTIONS,
+  KAPULA_GYRO_RANGE_DEFAULT,
+  KAPULA_MOTION_BATCH_MAX,
+  KAPULA_PROTOCOL_VERSION,
   GENERIC_GAMEPAD_SCHEMA,
   controlSchemaSchema,
   dpadToVector,
-  gamepadCodeSchema,
-  gamepadErrorCodeSchema,
-  gamepadInputFrameSchema,
-  gamepadMotionSampleSchema,
-  gamepadPlayerClientMessageSchema,
-  gamepadPlayerNameSchema,
-  gamepadServerMessageSchema,
-  gamepadSessionConfigSchema,
+  kapulaCodeSchema,
+  kapulaErrorCodeSchema,
+  kapulaInputFrameSchema,
+  kapulaMotionSampleSchema,
+  kapulaPlayerClientMessageSchema,
+  kapulaPlayerNameSchema,
+  kapulaServerMessageSchema,
+  kapulaSessionConfigSchema,
   hasCapability,
   hasSchemaChoice,
   isSelectableSchemaId,
@@ -26,42 +26,42 @@ import {
 
 test.describe("player name validation", () => {
   test("accepts sensible names", () => {
-    expect(gamepadPlayerNameSchema.parse("Alice")).toBe("Alice");
-    expect(gamepadPlayerNameSchema.parse("Äiti 42")).toBe("Äiti 42");
-    expect(gamepadPlayerNameSchema.parse("player_one-2")).toBe("player_one-2");
+    expect(kapulaPlayerNameSchema.parse("Alice")).toBe("Alice");
+    expect(kapulaPlayerNameSchema.parse("Äiti 42")).toBe("Äiti 42");
+    expect(kapulaPlayerNameSchema.parse("player_one-2")).toBe("player_one-2");
   });
 
   test("trims and collapses whitespace", () => {
-    expect(gamepadPlayerNameSchema.parse("  Bob  ")).toBe("Bob");
-    expect(gamepadPlayerNameSchema.parse("A   B")).toBe("A B");
+    expect(kapulaPlayerNameSchema.parse("  Bob  ")).toBe("Bob");
+    expect(kapulaPlayerNameSchema.parse("A   B")).toBe("A B");
   });
 
   test("rejects empty, too long and symbol-laden names", () => {
-    expect(() => gamepadPlayerNameSchema.parse("")).toThrow();
-    expect(() => gamepadPlayerNameSchema.parse("   ")).toThrow();
-    expect(() => gamepadPlayerNameSchema.parse("a".repeat(17))).toThrow();
-    expect(() => gamepadPlayerNameSchema.parse("fire🔥")).toThrow();
-    expect(() => gamepadPlayerNameSchema.parse("<script>")).toThrow();
-    expect(() => gamepadPlayerNameSchema.parse("a!b")).toThrow();
+    expect(() => kapulaPlayerNameSchema.parse("")).toThrow();
+    expect(() => kapulaPlayerNameSchema.parse("   ")).toThrow();
+    expect(() => kapulaPlayerNameSchema.parse("a".repeat(17))).toThrow();
+    expect(() => kapulaPlayerNameSchema.parse("fire🔥")).toThrow();
+    expect(() => kapulaPlayerNameSchema.parse("<script>")).toThrow();
+    expect(() => kapulaPlayerNameSchema.parse("a!b")).toThrow();
   });
 });
 
 test.describe("join/setup codes", () => {
   test("normalizes case and whitespace", () => {
-    expect(gamepadCodeSchema.parse(" abc234 ")).toBe("ABC234");
+    expect(kapulaCodeSchema.parse(" abc234 ")).toBe("ABC234");
   });
 
   test("rejects wrong length and ambiguous characters", () => {
-    expect(() => gamepadCodeSchema.parse("ABC23")).toThrow();
-    expect(() => gamepadCodeSchema.parse("ABC2345")).toThrow();
+    expect(() => kapulaCodeSchema.parse("ABC23")).toThrow();
+    expect(() => kapulaCodeSchema.parse("ABC2345")).toThrow();
     // 0, O, 1, I, L are excluded from the alphabet
-    expect(() => gamepadCodeSchema.parse("ABC10I")).toThrow();
+    expect(() => kapulaCodeSchema.parse("ABC10I")).toThrow();
   });
 });
 
 test.describe("session config validation", () => {
   test("empty config gets full defaults", () => {
-    const config = gamepadSessionConfigSchema.parse({});
+    const config = kapulaSessionConfigSchema.parse({});
     expect(config.minPlayers).toBe(1);
     expect(config.maxPlayers).toBe(8);
     expect(config.schemas).toEqual([GENERIC_GAMEPAD_SCHEMA]);
@@ -71,30 +71,30 @@ test.describe("session config validation", () => {
   });
 
   test("disallowLayoutCustomization is an opt-in boolean that round-trips", () => {
-    const locked = gamepadSessionConfigSchema.parse({
+    const locked = kapulaSessionConfigSchema.parse({
       disallowLayoutCustomization: true,
     });
     expect(locked.disallowLayoutCustomization).toBe(true);
-    expect(gamepadSessionConfigSchema.parse(locked)).toEqual(locked);
+    expect(kapulaSessionConfigSchema.parse(locked)).toEqual(locked);
     expect(() =>
-      gamepadSessionConfigSchema.parse({ disallowLayoutCustomization: "yes" }),
+      kapulaSessionConfigSchema.parse({ disallowLayoutCustomization: "yes" }),
     ).toThrow();
   });
 
   test("driverAppUuid is optional and must be a UUID", () => {
-    expect(gamepadSessionConfigSchema.parse({}).driverAppUuid).toBeUndefined();
+    expect(kapulaSessionConfigSchema.parse({}).driverAppUuid).toBeUndefined();
     const uuid = "7d3a2c1e-5b64-4f0a-9c8d-2e1f0b6a4d95";
-    expect(gamepadSessionConfigSchema.parse({ driverAppUuid: uuid }).driverAppUuid).toBe(
+    expect(kapulaSessionConfigSchema.parse({ driverAppUuid: uuid }).driverAppUuid).toBe(
       uuid,
     );
     expect(() =>
-      gamepadSessionConfigSchema.parse({ driverAppUuid: "tank-game" }),
+      kapulaSessionConfigSchema.parse({ driverAppUuid: "tank-game" }),
     ).toThrow();
     // Players learn it from the snapshot, which carries the full config.
-    const snapshot = gamepadServerMessageSchema.parse({
+    const snapshot = kapulaServerMessageSchema.parse({
       type: "snapshot",
       snapshot: {
-        protocolVersion: GAMEPAD_PROTOCOL_VERSION,
+        protocolVersion: KAPULA_PROTOCOL_VERSION,
         sessionId: "s",
         state: "in_progress",
         config: { driverAppUuid: uuid },
@@ -109,17 +109,17 @@ test.describe("session config validation", () => {
 
   test("rejects minPlayers above maxPlayers", () => {
     expect(() =>
-      gamepadSessionConfigSchema.parse({ minPlayers: 4, maxPlayers: 2 }),
+      kapulaSessionConfigSchema.parse({ minPlayers: 4, maxPlayers: 2 }),
     ).toThrow();
   });
 
   test("rejects duplicate schema ids and control ids", () => {
     const schema = GENERIC_GAMEPAD_SCHEMA;
     expect(() =>
-      gamepadSessionConfigSchema.parse({ schemas: [schema, schema] }),
+      kapulaSessionConfigSchema.parse({ schemas: [schema, schema] }),
     ).toThrow();
     expect(() =>
-      gamepadSessionConfigSchema.parse({
+      kapulaSessionConfigSchema.parse({
         schemas: [
           {
             id: "dup-controls",
@@ -136,18 +136,18 @@ test.describe("session config validation", () => {
 
   test("colors must be unique and cover maxPlayers", () => {
     expect(() =>
-      gamepadSessionConfigSchema.parse({
+      kapulaSessionConfigSchema.parse({
         maxPlayers: 2,
         colors: ["#FF0000", "#FF0000"],
       }),
     ).toThrow();
     expect(() =>
-      gamepadSessionConfigSchema.parse({
+      kapulaSessionConfigSchema.parse({
         maxPlayers: 3,
         colors: ["#FF0000", "#00FF00"],
       }),
     ).toThrow();
-    const ok = gamepadSessionConfigSchema.parse({
+    const ok = kapulaSessionConfigSchema.parse({
       maxPlayers: 2,
       colors: ["#FF0000", "#00FF00", "#0000FF"],
     });
@@ -155,10 +155,10 @@ test.describe("session config validation", () => {
   });
 
   test("default palette covers the player cap", () => {
-    expect(new Set(GAMEPAD_DEFAULT_COLORS).size).toBe(
-      GAMEPAD_DEFAULT_COLORS.length,
+    expect(new Set(KAPULA_DEFAULT_COLORS).size).toBe(
+      KAPULA_DEFAULT_COLORS.length,
     );
-    expect(GAMEPAD_DEFAULT_COLORS.length).toBeGreaterThanOrEqual(12);
+    expect(KAPULA_DEFAULT_COLORS.length).toBeGreaterThanOrEqual(12);
   });
 });
 
@@ -174,7 +174,7 @@ test.describe("roster sessions", () => {
   ];
 
   test("sizes the session to the roster and normalizes names", () => {
-    const config = gamepadSessionConfigSchema.parse({
+    const config = kapulaSessionConfigSchema.parse({
       roster: [...roster, { name: "  Late   Joiner ", color: "#4D96FF" }],
     });
     expect(config.minPlayers).toBe(4);
@@ -184,42 +184,42 @@ test.describe("roster sessions", () => {
 
   test("player counts may be stated only when they match the roster", () => {
     expect(
-      gamepadSessionConfigSchema.parse({ roster, minPlayers: 3, maxPlayers: 3 })
+      kapulaSessionConfigSchema.parse({ roster, minPlayers: 3, maxPlayers: 3 })
         .maxPlayers,
     ).toBe(3);
     expect(() =>
-      gamepadSessionConfigSchema.parse({ roster, minPlayers: 1 }),
+      kapulaSessionConfigSchema.parse({ roster, minPlayers: 1 }),
     ).toThrow(/minPlayers/);
     expect(() =>
-      gamepadSessionConfigSchema.parse({ roster, maxPlayers: 8 }),
+      kapulaSessionConfigSchema.parse({ roster, maxPlayers: 8 }),
     ).toThrow(/maxPlayers/);
   });
 
   test("names are unique case-insensitively, colors unique and from the palette", () => {
     expect(() =>
-      gamepadSessionConfigSchema.parse({
+      kapulaSessionConfigSchema.parse({
         roster: [roster[0], { name: "player 1", color: "#4D96FF" }],
       }),
     ).toThrow(/Duplicate roster name/);
     expect(() =>
-      gamepadSessionConfigSchema.parse({
+      kapulaSessionConfigSchema.parse({
         roster: [roster[0], { name: "Other", color: "#FF6B6B" }],
       }),
     ).toThrow(/Duplicate roster color/);
     expect(() =>
-      gamepadSessionConfigSchema.parse({
+      kapulaSessionConfigSchema.parse({
         roster: [{ name: "Off palette", color: "#123456" }],
       }),
     ).toThrow(/not in the palette/);
     // A custom palette must cover the roster (it is maxPlayers) and hold its
     // colors.
     expect(() =>
-      gamepadSessionConfigSchema.parse({
+      kapulaSessionConfigSchema.parse({
         roster,
         colors: ["#FF6B6B", "#6BCB77"],
       }),
     ).toThrow();
-    const custom = gamepadSessionConfigSchema.parse({
+    const custom = kapulaSessionConfigSchema.parse({
       roster,
       colors: ["#FF6B6B", "#6BCB77", "#FFD93D"],
     });
@@ -227,26 +227,26 @@ test.describe("roster sessions", () => {
   });
 
   test("rejects an empty roster and invalid entries", () => {
-    expect(() => gamepadSessionConfigSchema.parse({ roster: [] })).toThrow();
+    expect(() => kapulaSessionConfigSchema.parse({ roster: [] })).toThrow();
     expect(() =>
-      gamepadSessionConfigSchema.parse({
+      kapulaSessionConfigSchema.parse({
         roster: [{ name: "!!!", color: "#FF6B6B" }],
       }),
     ).toThrow();
     expect(() =>
-      gamepadSessionConfigSchema.parse({
+      kapulaSessionConfigSchema.parse({
         roster: [{ name: "Player 1", color: "red" }],
       }),
     ).toThrow();
   });
 
   test("a parsed roster config round-trips through parsing (stored config)", () => {
-    const once = gamepadSessionConfigSchema.parse({ roster });
-    expect(gamepadSessionConfigSchema.parse(once)).toEqual(once);
+    const once = kapulaSessionConfigSchema.parse({ roster });
+    expect(kapulaSessionConfigSchema.parse(once)).toEqual(once);
   });
 
   test("free-join configs are unaffected", () => {
-    const config = gamepadSessionConfigSchema.parse({ minPlayers: 2 });
+    const config = kapulaSessionConfigSchema.parse({ minPlayers: 2 });
     expect(config.roster).toBeUndefined();
     expect(config.minPlayers).toBe(2);
     expect(config.maxPlayers).toBe(8);
@@ -255,12 +255,12 @@ test.describe("roster sessions", () => {
 
 test.describe("capabilities", () => {
   const parse = (capabilities: unknown) =>
-    gamepadSessionConfigSchema.safeParse({ capabilities });
+    kapulaSessionConfigSchema.safeParse({ capabilities });
 
   test("are kept verbatim, unknown names included", () => {
     // The server never interprets the list: a driver may declare something
     // this version has never heard of and an older phone just ignores it.
-    const config = gamepadSessionConfigSchema.parse({
+    const config = kapulaSessionConfigSchema.parse({
       capabilities: ["webrtc", "something-from-2030"],
     });
     expect(config.capabilities).toEqual(["webrtc", "something-from-2030"]);
@@ -274,16 +274,16 @@ test.describe("capabilities", () => {
     const stored = JSON.parse(
       JSON.stringify({ game: "Tanks", schemas: [GENERIC_GAMEPAD_SCHEMA] }),
     );
-    const config = gamepadSessionConfigSchema.parse(stored);
+    const config = kapulaSessionConfigSchema.parse(stored);
     expect(config.capabilities).toEqual([]);
     expect(hasCapability(config, "webrtc")).toBe(false);
   });
 
   test("round-trips through storage", () => {
-    const config = gamepadSessionConfigSchema.parse({
+    const config = kapulaSessionConfigSchema.parse({
       capabilities: ["webrtc"],
     });
-    const reparsed = gamepadSessionConfigSchema.parse(
+    const reparsed = kapulaSessionConfigSchema.parse(
       JSON.parse(JSON.stringify(config)),
     );
     expect(reparsed.capabilities).toEqual(["webrtc"]);
@@ -317,15 +317,15 @@ test.describe("error codes", () => {
       "unknown_schema",
       "unknown_player",
     ]) {
-      expect(gamepadErrorCodeSchema.parse(code)).toBe(code);
+      expect(kapulaErrorCodeSchema.parse(code)).toBe(code);
     }
-    expect(gamepadErrorCodeSchema.options).toHaveLength(6);
+    expect(kapulaErrorCodeSchema.options).toHaveLength(6);
   });
 
   test("an unknown code is not part of the contract", () => {
-    expect(gamepadErrorCodeSchema.safeParse("kaboom").success).toBe(false);
+    expect(kapulaErrorCodeSchema.safeParse("kaboom").success).toBe(false);
     expect(
-      gamepadServerMessageSchema.safeParse({
+      kapulaServerMessageSchema.safeParse({
         type: "error",
         code: "not_a_code",
         message: "nope",
@@ -507,7 +507,7 @@ test.describe("gyro controls", () => {
       type: "gyro",
       id: "lean",
       mode: "full",
-      range: GAMEPAD_GYRO_RANGE_DEFAULT,
+      range: KAPULA_GYRO_RANGE_DEFAULT,
     });
   });
 
@@ -551,7 +551,7 @@ test.describe("gyro controls", () => {
   });
 
   test("a session config mixing gyro and fallback schemas parses", () => {
-    const config = gamepadSessionConfigSchema.parse({
+    const config = kapulaSessionConfigSchema.parse({
       schemas: [
         {
           id: "tilt",
@@ -570,8 +570,8 @@ test.describe("gyro controls", () => {
 
 test.describe("dpad directions", () => {
   test("codes stay 1–2 chars — they ride in every input frame", () => {
-    expect(GAMEPAD_DPAD_DIRECTIONS).toHaveLength(9);
-    for (const direction of GAMEPAD_DPAD_DIRECTIONS) {
+    expect(KAPULA_DPAD_DIRECTIONS).toHaveLength(9);
+    for (const direction of KAPULA_DPAD_DIRECTIONS) {
       expect(direction.length).toBeLessThanOrEqual(2);
     }
   });
@@ -582,7 +582,7 @@ test.describe("dpad directions", () => {
     expect(dpadToVector("d")).toEqual({ x: 0, y: 1 });
     expect(dpadToVector("l")).toEqual({ x: -1, y: 0 });
     expect(dpadToVector("r")).toEqual({ x: 1, y: 0 });
-    for (const direction of GAMEPAD_DPAD_DIRECTIONS) {
+    for (const direction of KAPULA_DPAD_DIRECTIONS) {
       const { x, y } = dpadToVector(direction);
       const length = Math.hypot(x, y);
       expect(length).toBeCloseTo(direction === "c" ? 0 : 1, 10);
@@ -597,7 +597,7 @@ test.describe("dpad directions", () => {
 
 test.describe("input frames", () => {
   test("accepts buttons and normalized joysticks", () => {
-    const frame = gamepadInputFrameSchema.parse({
+    const frame = kapulaInputFrameSchema.parse({
       seq: 7,
       controls: { fire: true, stick: { x: -0.5, y: 1 } },
     });
@@ -605,7 +605,7 @@ test.describe("input frames", () => {
   });
 
   test("accepts single-axis and dpad values", () => {
-    const frame = gamepadInputFrameSchema.parse({
+    const frame = kapulaInputFrameSchema.parse({
       seq: 3,
       controls: {
         steer: { x: -0.25 },
@@ -622,53 +622,53 @@ test.describe("input frames", () => {
 
   test("rejects out-of-range axes, bad directions and negative seq", () => {
     expect(() =>
-      gamepadInputFrameSchema.parse({
+      kapulaInputFrameSchema.parse({
         seq: 1,
         controls: { stick: { x: 2, y: 0 } },
       }),
     ).toThrow();
     expect(() =>
-      gamepadInputFrameSchema.parse({ seq: 1, controls: { steer: { x: -2 } } }),
+      kapulaInputFrameSchema.parse({ seq: 1, controls: { steer: { x: -2 } } }),
     ).toThrow();
     expect(() =>
-      gamepadInputFrameSchema.parse({ seq: 1, controls: { throttle: { y: 9 } } }),
+      kapulaInputFrameSchema.parse({ seq: 1, controls: { throttle: { y: 9 } } }),
     ).toThrow();
     expect(() =>
-      gamepadInputFrameSchema.parse({ seq: 1, controls: { look: "upwards" } }),
+      kapulaInputFrameSchema.parse({ seq: 1, controls: { look: "upwards" } }),
     ).toThrow();
     // The long-form names were replaced by the short codes.
     expect(() =>
-      gamepadInputFrameSchema.parse({ seq: 1, controls: { look: "up-right" } }),
+      kapulaInputFrameSchema.parse({ seq: 1, controls: { look: "up-right" } }),
     ).toThrow();
     expect(() =>
-      gamepadInputFrameSchema.parse({ seq: -1, controls: {} }),
+      kapulaInputFrameSchema.parse({ seq: -1, controls: {} }),
     ).toThrow();
   });
 });
 
 test.describe("physical gamepads", () => {
   test("allowPhysicalGamepad defaults to false and must be a boolean", () => {
-    expect(gamepadSessionConfigSchema.parse({}).allowPhysicalGamepad).toBe(false);
+    expect(kapulaSessionConfigSchema.parse({}).allowPhysicalGamepad).toBe(false);
     expect(
-      gamepadSessionConfigSchema.parse({ allowPhysicalGamepad: true })
+      kapulaSessionConfigSchema.parse({ allowPhysicalGamepad: true })
         .allowPhysicalGamepad,
     ).toBe(true);
     expect(() =>
-      gamepadSessionConfigSchema.parse({ allowPhysicalGamepad: "yes" }),
+      kapulaSessionConfigSchema.parse({ allowPhysicalGamepad: "yes" }),
     ).toThrow();
   });
 
   test("the reserved schema id cannot be used by a driver schema", () => {
     expect(() =>
-      gamepadSessionConfigSchema.parse({
+      kapulaSessionConfigSchema.parse({
         schemas: [{ ...GENERIC_GAMEPAD_SCHEMA, id: PHYSICAL_GAMEPAD_SCHEMA_ID }],
       }),
     ).toThrow(/reserved/);
   });
 
   test("the reserved id is selectable exactly when the driver allowed it", () => {
-    const off = gamepadSessionConfigSchema.parse({});
-    const on = gamepadSessionConfigSchema.parse({ allowPhysicalGamepad: true });
+    const off = kapulaSessionConfigSchema.parse({});
+    const on = kapulaSessionConfigSchema.parse({ allowPhysicalGamepad: true });
     expect(isSelectableSchemaId(off, "generic")).toBe(true);
     expect(isSelectableSchemaId(off, PHYSICAL_GAMEPAD_SCHEMA_ID)).toBe(false);
     expect(isSelectableSchemaId(on, PHYSICAL_GAMEPAD_SCHEMA_ID)).toBe(true);
@@ -693,16 +693,16 @@ test.describe("physical gamepads", () => {
   });
 
   test("trigger values are analog scalars in [-1, 1]", () => {
-    const frame = gamepadInputFrameSchema.parse({
+    const frame = kapulaInputFrameSchema.parse({
       seq: 1,
       controls: { lt: 0, rt: 0.75, a: true, dpad: "c" },
     });
     expect(frame.controls["rt"]).toBe(0.75);
     expect(() =>
-      gamepadInputFrameSchema.parse({ seq: 1, controls: { rt: 1.5 } }),
+      kapulaInputFrameSchema.parse({ seq: 1, controls: { rt: 1.5 } }),
     ).toThrow();
     expect(() =>
-      gamepadInputFrameSchema.parse({ seq: 1, controls: { rt: Number.NaN } }),
+      kapulaInputFrameSchema.parse({ seq: 1, controls: { rt: Number.NaN } }),
     ).toThrow();
   });
 });
@@ -739,43 +739,43 @@ test.describe("motion controls and stream", () => {
 
   test("samples are 7-tuples within sensor ranges", () => {
     expect(
-      gamepadMotionSampleSchema.safeParse([12.5, 0, 0, 1, 0, 0, 0]).success,
+      kapulaMotionSampleSchema.safeParse([12.5, 0, 0, 1, 0, 0, 0]).success,
     ).toBe(true);
     expect(
-      gamepadMotionSampleSchema.safeParse([0, 0, 0, 1, 0, 0]).success,
+      kapulaMotionSampleSchema.safeParse([0, 0, 0, 1, 0, 0]).success,
     ).toBe(false);
     expect(
-      gamepadMotionSampleSchema.safeParse([0, 0, 0, 99, 0, 0, 0]).success,
+      kapulaMotionSampleSchema.safeParse([0, 0, 0, 99, 0, 0, 0]).success,
     ).toBe(false);
     expect(
-      gamepadMotionSampleSchema.safeParse([-1, 0, 0, 1, 0, 0, 0]).success,
+      kapulaMotionSampleSchema.safeParse([-1, 0, 0, 1, 0, 0, 0]).success,
     ).toBe(false);
     expect(
-      gamepadMotionSampleSchema.safeParse([0, 0, 0, 1, 0, 0, 9000]).success,
+      kapulaMotionSampleSchema.safeParse([0, 0, 0, 1, 0, 0, 9000]).success,
     ).toBe(false);
   });
 
   test("the player message carries 1..16 samples", () => {
     const sample = [1, 0, 0, 1, 0, 0, 0];
-    const ok = gamepadPlayerClientMessageSchema.safeParse({
+    const ok = kapulaPlayerClientMessageSchema.safeParse({
       type: "motion",
       samples: [sample, sample, sample],
     });
     expect(ok.success).toBe(true);
     expect(
-      gamepadPlayerClientMessageSchema.safeParse({ type: "motion", samples: [] })
+      kapulaPlayerClientMessageSchema.safeParse({ type: "motion", samples: [] })
         .success,
     ).toBe(false);
     expect(
-      gamepadPlayerClientMessageSchema.safeParse({
+      kapulaPlayerClientMessageSchema.safeParse({
         type: "motion",
-        samples: Array.from({ length: GAMEPAD_MOTION_BATCH_MAX + 1 }, () => sample),
+        samples: Array.from({ length: KAPULA_MOTION_BATCH_MAX + 1 }, () => sample),
       }).success,
     ).toBe(false);
   });
 
   test("the driver sees the same samples with the player id", () => {
-    const parsed = gamepadServerMessageSchema.parse({
+    const parsed = kapulaServerMessageSchema.parse({
       type: "motion",
       playerId: "p1",
       samples: [[1, 0, 0, 1, 0, 0, 0]],

@@ -1,7 +1,7 @@
-import type { GamepadSessionState } from "@kapula/protocol";
+import type { KapulaSessionState } from "@kapula/protocol";
 
 /**
- * The persistence contract of the gamepad server. Everything the server
+ * The persistence contract of the Kapula server. Everything the server
  * keeps between requests — sessions, players, driver keys, background images
  * — goes through this interface, so the server itself has no database
  * dependency: the monorepo plugs in Postgres (`postgres-store.ts`, over the
@@ -17,7 +17,7 @@ import type { GamepadSessionState } from "@kapula/protocol";
  * - Uniqueness among active rows: a session's setup code, join code and
  *   driver token; a player's token, and per session a player's color and
  *   name (case-insensitive); a driver key's hash; a background key. A
- *   violation throws {@link GamepadStoreConflictError} — callers retry with
+ *   violation throws {@link KapulaStoreConflictError} — callers retry with
  *   a fresh code or report "taken".
  * - Elapsed time is the store's to measure (`getDriverAwayMs`,
  *   `endInactiveSessions`): a database compares its own clock against its
@@ -25,10 +25,10 @@ import type { GamepadSessionState } from "@kapula/protocol";
  *   Records expose no activity timestamps for that reason.
  */
 
-export type GamepadSessionRecord = {
+export type KapulaSessionRecord = {
   id: string;
   ownerId: number;
-  state: GamepadSessionState;
+  state: KapulaSessionState;
   /** Single-use; null once the driver's setup call consumed it. */
   setupCode: string | null;
   /** Set at driver setup; what players type to join. */
@@ -48,7 +48,7 @@ export type GamepadSessionRecord = {
   createdAt: Date;
 };
 
-export type GamepadPlayerRecord = {
+export type KapulaPlayerRecord = {
   id: string;
   sessionId: string;
   name: string;
@@ -60,7 +60,7 @@ export type GamepadPlayerRecord = {
   createdAt: Date;
 };
 
-export type GamepadDriverKeyRecord = {
+export type KapulaDriverKeyRecord = {
   id: number;
   userId: number;
   name: string;
@@ -73,31 +73,31 @@ export type GamepadDriverKeyRecord = {
 };
 
 /** A private session with the name of the driver key that opened it. */
-export type GamepadPrivateSessionRecord = GamepadSessionRecord & {
+export type KapulaPrivateSessionRecord = KapulaSessionRecord & {
   keyName: string | null;
 };
 
 /** Everything but the image itself: what snapshots and broadcasts need. */
-export type GamepadBackgroundMeta = { key: string; fit: string };
+export type KapulaBackgroundMeta = { key: string; fit: string };
 
-export type GamepadBackgroundImage = {
+export type KapulaBackgroundImage = {
   contentType: string;
   /** The image bytes, base64-encoded. */
   data: string;
 };
 
 /** A uniqueness rule was violated; see the contract above for the rules. */
-export class GamepadStoreConflictError extends Error {
+export class KapulaStoreConflictError extends Error {
   constructor(message = "Conflict") {
     super(message);
-    this.name = "GamepadStoreConflictError";
+    this.name = "KapulaStoreConflictError";
   }
 }
 
-export const isStoreConflict = (e: unknown): e is GamepadStoreConflictError =>
-  e instanceof GamepadStoreConflictError;
+export const isStoreConflict = (e: unknown): e is KapulaStoreConflictError =>
+  e instanceof KapulaStoreConflictError;
 
-export interface GamepadStore {
+export interface KapulaStore {
   // --- Sessions ---
 
   /** Throws a conflict when `setupCode` is already an active session's. */
@@ -106,24 +106,24 @@ export interface GamepadStore {
     setupCode: string;
     metadata: string | null;
     driverKeyId?: number | null;
-  }): Promise<GamepadSessionRecord>;
+  }): Promise<KapulaSessionRecord>;
 
   /**
    * The owner's web-hosted session (created with a setup code, not by a
    * driver key) — the one slot the host page manages. At most one is active.
    */
-  getActiveHostedSessionByOwner(ownerId: number): Promise<GamepadSessionRecord | null>;
+  getActiveHostedSessionByOwner(ownerId: number): Promise<KapulaSessionRecord | null>;
 
   /** The session a driver key has open; at most one is active per key. */
-  getActiveSessionByDriverKey(keyId: number): Promise<GamepadSessionRecord | null>;
+  getActiveSessionByDriverKey(keyId: number): Promise<KapulaSessionRecord | null>;
 
   /** Every active session the user owns: hosted first, then by age. */
-  getActiveSessionsByOwner(ownerId: number): Promise<GamepadSessionRecord[]>;
+  getActiveSessionsByOwner(ownerId: number): Promise<KapulaSessionRecord[]>;
 
-  getActiveSessionById(sessionId: string): Promise<GamepadSessionRecord | null>;
-  getActiveSessionBySetupCode(setupCode: string): Promise<GamepadSessionRecord | null>;
-  getActiveSessionByJoinCode(joinCode: string): Promise<GamepadSessionRecord | null>;
-  getActiveSessionByDriverToken(driverToken: string): Promise<GamepadSessionRecord | null>;
+  getActiveSessionById(sessionId: string): Promise<KapulaSessionRecord | null>;
+  getActiveSessionBySetupCode(setupCode: string): Promise<KapulaSessionRecord | null>;
+  getActiveSessionByJoinCode(joinCode: string): Promise<KapulaSessionRecord | null>;
+  getActiveSessionByDriverToken(driverToken: string): Promise<KapulaSessionRecord | null>;
 
   /**
    * Driver setup: consumes the setup code, opens the session for players
@@ -137,13 +137,13 @@ export interface GamepadStore {
     joinCode: string;
     driverToken: string;
     config: Record<string, unknown>;
-  }): Promise<GamepadSessionRecord | null>;
+  }): Promise<KapulaSessionRecord | null>;
 
   /** Also counts as activity. Null when the session is not active. */
   updateSessionState(params: {
     sessionId: string;
-    state: GamepadSessionState;
-  }): Promise<GamepadSessionRecord | null>;
+    state: KapulaSessionState;
+  }): Promise<KapulaSessionRecord | null>;
 
   /** Marks the session active now (the 24 h idle clock). */
   touchSessionActivity(sessionId: string): Promise<void>;
@@ -168,7 +168,7 @@ export interface GamepadStore {
   markAllDriversDisconnected(): Promise<number>;
 
   /** Null when it was already ended. */
-  endSession(sessionId: string): Promise<GamepadSessionRecord | null>;
+  endSession(sessionId: string): Promise<KapulaSessionRecord | null>;
 
   /**
    * Ends sessions idle for 24 hours, `not_initialized` sessions idle for 30
@@ -188,37 +188,37 @@ export interface GamepadStore {
     color: string;
     token: string;
     schemaId: string;
-  }): Promise<GamepadPlayerRecord>;
+  }): Promise<KapulaPlayerRecord>;
 
   /** In join order. */
-  getActivePlayersBySession(sessionId: string): Promise<GamepadPlayerRecord[]>;
-  getActivePlayerByToken(token: string): Promise<GamepadPlayerRecord | null>;
+  getActivePlayersBySession(sessionId: string): Promise<KapulaPlayerRecord[]>;
+  getActivePlayerByToken(token: string): Promise<KapulaPlayerRecord | null>;
 
   /**
    * Marks the player as left: the name and color are immediately reusable
    * and the token goes dead. Null when the player was already gone.
    */
-  markPlayerLeft(playerId: string): Promise<GamepadPlayerRecord | null>;
+  markPlayerLeft(playerId: string): Promise<KapulaPlayerRecord | null>;
 
   /** Clears every active player's ready flag; returns the ones that changed. */
-  clearReadyBySession(sessionId: string): Promise<GamepadPlayerRecord[]>;
+  clearReadyBySession(sessionId: string): Promise<KapulaPlayerRecord[]>;
 
   updatePlayerReady(params: {
     playerId: string;
     ready: boolean;
-  }): Promise<GamepadPlayerRecord | null>;
+  }): Promise<KapulaPlayerRecord | null>;
 
   /** Throws a conflict when another active player of the session holds the name or color. */
   updatePlayerProfile(params: {
     playerId: string;
     name: string;
     color: string;
-  }): Promise<GamepadPlayerRecord | null>;
+  }): Promise<KapulaPlayerRecord | null>;
 
   updatePlayerSchema(params: {
     playerId: string;
     schemaId: string;
-  }): Promise<GamepadPlayerRecord | null>;
+  }): Promise<KapulaPlayerRecord | null>;
 
   // --- Driver keys ---
 
@@ -230,13 +230,13 @@ export interface GamepadStore {
     hash: string;
     prefix: string;
     linkedEmails: string[];
-  }): Promise<GamepadDriverKeyRecord>;
+  }): Promise<KapulaDriverKeyRecord>;
 
   /** Live (unrevoked) keys, newest first. */
-  getDriverKeysByUser(userId: number): Promise<GamepadDriverKeyRecord[]>;
+  getDriverKeysByUser(userId: number): Promise<KapulaDriverKeyRecord[]>;
 
   /** Live keys only; a revoked key does not match. */
-  getLiveDriverKeyByHash(hash: string): Promise<GamepadDriverKeyRecord | null>;
+  getLiveDriverKeyByHash(hash: string): Promise<KapulaDriverKeyRecord | null>;
 
   touchDriverKeyUsed(keyId: number): Promise<void>;
 
@@ -245,7 +245,7 @@ export interface GamepadStore {
     keyId: number;
     userId: number;
     linkedEmails: string[];
-  }): Promise<GamepadDriverKeyRecord | null>;
+  }): Promise<KapulaDriverKeyRecord | null>;
 
   /** Owner-scoped and permanent; false when nothing was revoked. */
   revokeDriverKey(params: { keyId: number; userId: number }): Promise<boolean>;
@@ -262,7 +262,7 @@ export interface GamepadStore {
     userId: number;
     email: string;
     sessionId?: string | null;
-  }): Promise<GamepadPrivateSessionRecord[]>;
+  }): Promise<KapulaPrivateSessionRecord[]>;
 
   // --- Driver background image ---
 
@@ -273,14 +273,14 @@ export interface GamepadStore {
     contentType: string;
     fit: string;
     data: string;
-  }): Promise<GamepadBackgroundMeta>;
+  }): Promise<KapulaBackgroundMeta>;
 
   /** Null when the session had none. */
-  deleteSessionBackground(sessionId: string): Promise<GamepadBackgroundMeta | null>;
-  getSessionBackgroundMeta(sessionId: string): Promise<GamepadBackgroundMeta | null>;
+  deleteSessionBackground(sessionId: string): Promise<KapulaBackgroundMeta | null>;
+  getSessionBackgroundMeta(sessionId: string): Promise<KapulaBackgroundMeta | null>;
 
   /** The image behind a key, only while its session is active. */
-  getLiveBackgroundByKey(key: string): Promise<GamepadBackgroundImage | null>;
+  getLiveBackgroundByKey(key: string): Promise<KapulaBackgroundImage | null>;
 
   /** Drops the images of ended sessions; returns how many. */
   deleteEndedSessionBackgrounds(): Promise<number>;

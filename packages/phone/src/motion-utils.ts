@@ -1,7 +1,7 @@
 import {
-  GAMEPAD_MOTION_ACCEL_MAX_G,
-  GAMEPAD_MOTION_RATE_MAX_DPS,
-  type GamepadMotionSample,
+  KAPULA_MOTION_ACCEL_MAX_G,
+  KAPULA_MOTION_RATE_MAX_DPS,
+  type KapulaMotionSample,
 } from "@kapula/protocol";
 import { gravityOf, type GyroTilt } from "./gyro-utils.js";
 
@@ -82,19 +82,19 @@ const round = (value: number, decimals: number) => {
 export const encodeMotionSample = (
   raw: RawMotion,
   accelSign: 1 | -1,
-): GamepadMotionSample => {
+): KapulaMotionSample => {
   const g = (v: number) =>
     round(
       clamp(
         (accelSign * v) / STANDARD_GRAVITY,
-        -GAMEPAD_MOTION_ACCEL_MAX_G,
-        GAMEPAD_MOTION_ACCEL_MAX_G,
+        -KAPULA_MOTION_ACCEL_MAX_G,
+        KAPULA_MOTION_ACCEL_MAX_G,
       ),
       4,
     );
   const dps = (v: number) =>
     round(
-      clamp(v, -GAMEPAD_MOTION_RATE_MAX_DPS, GAMEPAD_MOTION_RATE_MAX_DPS),
+      clamp(v, -KAPULA_MOTION_RATE_MAX_DPS, KAPULA_MOTION_RATE_MAX_DPS),
       2,
     );
   return [

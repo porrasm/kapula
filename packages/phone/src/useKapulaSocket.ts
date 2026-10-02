@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
-  GamepadDriverClientMessage,
-  GamepadPlayerClientMessage,
-  GamepadServerMessage,
+  KapulaDriverClientMessage,
+  KapulaPlayerClientMessage,
+  KapulaServerMessage,
 } from "@kapula/protocol";
 
 /** Server-initiated closes that reconnecting cannot fix. */
@@ -19,24 +19,24 @@ const FATAL_CLOSE_CODES = new Set([4001, 4004, 4005, 4008, 4010, 4011]);
  */
 const PING_INTERVAL_MS = 25_000;
 
-export type GamepadSocket = {
+export type KapulaSocket = {
   isConnected: boolean;
   /** Set when the server closed us for good (ended, replaced, not found). */
   fatalClose: { code: number; reason: string } | null;
-  send: (msg: GamepadPlayerClientMessage | GamepadDriverClientMessage) => void;
+  send: (msg: KapulaPlayerClientMessage | KapulaDriverClientMessage) => void;
 };
 
 /**
- * Session WebSocket (`buildGamepadWsUrl` in config.tsx) with automatic
+ * Session WebSocket (`buildKapulaWsUrl` in config.tsx) with automatic
  * reconnection; modeled on the video app's useSignaling. Fatal close codes stop the reconnect loop and are
  * surfaced so the caller can clear stored credentials.
  */
-export function useGamepadSocket(
+export function useKapulaSocket(
   url: string | null,
-  onMessage: (msg: GamepadServerMessage) => void,
-): GamepadSocket {
+  onMessage: (msg: KapulaServerMessage) => void,
+): KapulaSocket {
   const [isConnected, setIsConnected] = useState(false);
-  const [fatalClose, setFatalClose] = useState<GamepadSocket["fatalClose"]>(null);
+  const [fatalClose, setFatalClose] = useState<KapulaSocket["fatalClose"]>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const onMessageRef = useRef(onMessage);
   const reconnectTimerRef = useRef<number | null>(null);
@@ -90,7 +90,7 @@ export function useGamepadSocket(
 
       ws.onmessage = (ev) => {
         try {
-          const msg = JSON.parse(ev.data as string) as GamepadServerMessage;
+          const msg = JSON.parse(ev.data as string) as KapulaServerMessage;
           onMessageRef.current(msg);
         } catch {
           /* ignore */
@@ -136,7 +136,7 @@ export function useGamepadSocket(
   }, [url]);
 
   const send = useCallback(
-    (msg: GamepadPlayerClientMessage | GamepadDriverClientMessage) => {
+    (msg: KapulaPlayerClientMessage | KapulaDriverClientMessage) => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify(msg));
       }

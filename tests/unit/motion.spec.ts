@@ -8,9 +8,9 @@ import {
   readMotionEvent,
 } from "@kapula/phone/utils";
 import {
-  GAMEPAD_MOTION_ACCEL_MAX_G,
-  GAMEPAD_MOTION_BATCH_MAX,
-  gamepadMotionSampleSchema,
+  KAPULA_MOTION_ACCEL_MAX_G,
+  KAPULA_MOTION_BATCH_MAX,
+  kapulaMotionSampleSchema,
 } from "@kapula/protocol";
 
 const FLAT_UP = { beta: 0, gamma: 0 };
@@ -59,7 +59,7 @@ test.describe("encodeMotionSample", () => {
       1,
     );
     expect(sample).toEqual([100, 0, 0.5, 1, 10, -20.01, 360]);
-    expect(gamepadMotionSampleSchema.safeParse(sample).success).toBe(true);
+    expect(kapulaMotionSampleSchema.safeParse(sample).success).toBe(true);
   });
 
   test("an inverted accelerometer is flipped to the spec sign", () => {
@@ -76,12 +76,12 @@ test.describe("encodeMotionSample", () => {
       1,
     );
     expect(sample[0]).toBe(0);
-    expect(sample[1]).toBe(GAMEPAD_MOTION_ACCEL_MAX_G);
-    expect(gamepadMotionSampleSchema.safeParse(sample).success).toBe(true);
+    expect(sample[1]).toBe(KAPULA_MOTION_ACCEL_MAX_G);
+    expect(kapulaMotionSampleSchema.safeParse(sample).success).toBe(true);
   });
 
   test("a batch never exceeds what one message may carry", () => {
-    expect(MOTION_BATCH_SIZE).toBeLessThanOrEqual(GAMEPAD_MOTION_BATCH_MAX);
+    expect(MOTION_BATCH_SIZE).toBeLessThanOrEqual(KAPULA_MOTION_BATCH_MAX);
   });
 });
 

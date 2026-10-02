@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
 import crypto from "crypto";
 import {
-  GamepadStoreConflictError,
-  type GamepadStore,
+  KapulaStoreConflictError,
+  type KapulaStore,
 } from "../store.js";
 
 /**
- * The behaviour every `GamepadStore` implementation must share, as one spec
+ * The behaviour every `KapulaStore` implementation must share, as one spec
  * run against each of them: the in-memory store in the unit project, the
  * Postgres store in the e2e project (where a database is available). The
  * rules it checks are the ones in the contract's doc comment in store.ts;
@@ -17,8 +17,8 @@ import {
  * runs never collide.
  */
 
-export type GamepadStoreFixture = {
-  store: GamepadStore;
+export type KapulaStoreFixture = {
+  store: KapulaStore;
   /** Two users that exist in the host's world (foreign keys, for Postgres). */
   ownerId: number;
   otherUserId: number;
@@ -50,16 +50,16 @@ const expectConflict = async (run: () => Promise<unknown>) => {
   } catch (e) {
     error = e;
   }
-  expect(error).toBeInstanceOf(GamepadStoreConflictError);
+  expect(error).toBeInstanceOf(KapulaStoreConflictError);
 };
 
-export const describeGamepadStoreConformance = (
+export const describeKapulaStoreConformance = (
   name: string,
-  make: () => Promise<GamepadStoreFixture>,
+  make: () => Promise<KapulaStoreFixture>,
 ) => {
-  test.describe(`${name}: GamepadStore conformance`, () => {
-    let f: GamepadStoreFixture;
-    let store: GamepadStore;
+  test.describe(`${name}: KapulaStore conformance`, () => {
+    let f: KapulaStoreFixture;
+    let store: KapulaStore;
 
     test.beforeAll(async () => {
       f = await make();

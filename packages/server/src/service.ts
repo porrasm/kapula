@@ -1,18 +1,18 @@
 import {
-  gamepadSessionStateSchema,
+  kapulaSessionStateSchema,
   getSessionColors,
-  type GamepadJoinInfo,
-  type GamepadJoinResult,
-  type GamepadPlayerStatus,
-  type GamepadSessionState,
+  type KapulaJoinInfo,
+  type KapulaJoinResult,
+  type KapulaPlayerStatus,
+  type KapulaSessionState,
 } from "@kapula/protocol";
-import type { GamepadContext } from "./context.js";
+import type { KapulaContext } from "./context.js";
 import {
   acceptsJoins,
   driverKeyDisplayPrefix,
   generateDriverKey,
-  generateGamepadCode,
-  generateGamepadToken,
+  generateKapulaCode,
+  generateKapulaToken,
   getJoinError,
   hashDriverKey,
   pickDefaultColor,
@@ -22,31 +22,31 @@ import {
 import { parseSessionConfig, type SessionRuntimes } from "./runtime.js";
 import {
   isStoreConflict,
-  type GamepadDriverKeyRecord,
-  type GamepadSessionRecord,
+  type KapulaDriverKeyRecord,
+  type KapulaSessionRecord,
 } from "./store.js";
 
 /**
  * What the host page and the player phone do over HTTP, free of any web
- * framework: the monorepo wraps these in tRPC procedures (`gamepad.ts`), an
+ * framework: the monorepo wraps these in its own RPC layer (the monorepo: tRPC), an
  * embedded host calls them directly or behind its own routes. Failures are
- * {@link GamepadServiceError}s with a code the wrapper maps to its own
+ * {@link KapulaServiceError}s with a code the wrapper maps to its own
  * status codes.
  */
 
-export type GamepadServiceErrorCode = "not_found" | "conflict";
+export type KapulaServiceErrorCode = "not_found" | "conflict";
 
-export class GamepadServiceError extends Error {
-  readonly code: GamepadServiceErrorCode;
-  constructor(code: GamepadServiceErrorCode, message: string) {
+export class KapulaServiceError extends Error {
+  readonly code: KapulaServiceErrorCode;
+  constructor(code: KapulaServiceErrorCode, message: string) {
     super(message);
-    this.name = "GamepadServiceError";
+    this.name = "KapulaServiceError";
     this.code = code;
   }
 }
 
-const notFound = (message: string) => new GamepadServiceError("not_found", message);
-const conflict = (message: string) => new GamepadServiceError("conflict", message);
+const notFound = (message: string) => new KapulaServiceError("not_found", message);
+const conflict = (message: string) => new KapulaServiceError("conflict", message);
 
 /** Retries against the uniqueness of active codes. */
 const withCodeRetry = async <T>(
@@ -54,7 +54,7 @@ const withCodeRetry = async <T>(
 ): Promise<T> => {
   for (let i = 0; ; i++) {
     try {
-      return await attempt(generateGamepadCode());
+      return await attempt(generateKapulaCode());
     } catch (e) {
       if (!isStoreConflict(e) || i >= 4) throw e;
     }
@@ -62,9 +62,9 @@ const withCodeRetry = async <T>(
 };
 
 /** What the host page shows of one of the user's sessions. */
-export type GamepadMySession = {
+export type KapulaMySession = {
   sessionId: string;
-  state: GamepadSessionState;
+  state: KapulaSessionState;
   setupCode: string | null;
   joinCode: string | null;
   metadata: string | null;
@@ -78,9 +78,9 @@ export type GamepadMySession = {
 };
 
 const toMySession = (
-  session: GamepadSessionRecord,
+  session: KapulaSessionRecord,
   keyNames: Map<number, string>,
-): GamepadMySession => ({
+): KapulaMySession => ({
   sessionId: session.id,
   state: session.state,
   setupCode: session.setupCode,
@@ -96,7 +96,7 @@ const toMySession = (
       : (keyNames.get(session.driverKeyId) ?? null),
 });
 
-const toDriverKeyInfo = (key: GamepadDriverKeyRecord) => ({
+const toDriverKeyInfo = (key: KapulaDriverKeyRecord) => ({
   id: key.id,
   name: key.name,
   prefix: key.prefix,
@@ -106,8 +106,8 @@ const toDriverKeyInfo = (key: GamepadDriverKeyRecord) => ({
   linkedEmails: key.linkedEmails,
 });
 
-export const createGamepadService = (
-  ctx: GamepadContext,
+export const createKapulaService = (
+  ctx: KapulaContext,
   runtimes: SessionRuntimes,
 ) => {
   const { store, logger } = ctx;
@@ -120,7 +120,7 @@ export const createGamepadService = (
   const findOwnedSession = async (
     ownerId: number,
     sessionId: string | undefined,
-  ): Promise<GamepadSessionRecord | null> => {
+  ): Promise<KapulaSessionRecord | null> => {
     if (sessionId === undefined) {
       return store.getActiveHostedSessionByOwner(ownerId);
     }
@@ -134,7 +134,7 @@ export const createGamepadService = (
    */
   const findPublicSessionByJoinCode = async (
     joinCode: string,
-  ): Promise<GamepadSessionRecord | null> => {
+  ): Promise<KapulaSessionRecord | null> => {
     const session = await store.getActiveSessionByJoinCode(joinCode);
     if (!session || parseSessionConfig(session).private) return null;
     return session;
@@ -146,9 +146,9 @@ export const createGamepadService = (
    * session, the slot `name` picks), and announces the join.
    */
   const joinPlayer = async (
-    session: GamepadSessionRecord,
+    session: KapulaSessionRecord,
     requestedName: string | undefined,
-  ): Promise<GamepadJoinResult> => {
+  ): Promise<KapulaJoinResult> => {
     const config = parseSessionConfig(session);
     const runtime = runtimes.getRuntime(session);
 
@@ -193,7 +193,7 @@ export const createGamepadService = (
           sessionId: session.id,
           name,
           color,
-          token: generateGamepadToken(),
+          token: generateKapulaToken(),
           schemaId: config.schemas[0].id,
         });
         runtimes.notifyPlayerJoined(session, player);
@@ -204,7 +204,7 @@ export const createGamepadService = (
         };
       } catch (e) {
         if (isStoreConflict(e) && attempt < 4) continue;
-        logger.error("[gamepad] join failed", e);
+        logger.error("[kapula] join failed", e);
         throw e;
       }
     }
@@ -237,7 +237,7 @@ export const createGamepadService = (
 
     /**
      * Driver keys let a standalone driver create its own session without a
-     * host in a browser (see GAMEPAD.md "Driver keys"). The plain key is
+     * host in a browser (see KAPULA.md "Driver keys"). The plain key is
      * returned exactly once, here — only its hash is stored.
      */
     createDriverKey: async (params: {
@@ -377,14 +377,14 @@ export const createGamepadService = (
     },
 
     /** Everything the join screen needs; never exposes tokens. Null for an unknown code. */
-    getJoinInfo: async (joinCode: string): Promise<GamepadJoinInfo | null> => {
+    getJoinInfo: async (joinCode: string): Promise<KapulaJoinInfo | null> => {
       const session = await findPublicSessionByJoinCode(joinCode);
       if (!session) return null;
       const config = parseSessionConfig(session);
       const players = await store.getActivePlayersBySession(session.id);
       const takenColors = new Set(players.map((p) => p.color));
       const takenNames = new Set(players.map((p) => p.name.toLowerCase()));
-      const state = gamepadSessionStateSchema.parse(session.state);
+      const state = kapulaSessionStateSchema.parse(session.state);
       return {
         state,
         game: config.game ?? null,
@@ -418,7 +418,7 @@ export const createGamepadService = (
      * page verifies its "you are in a game" card with this so a player never
      * sees one for a session that ended while they were away.
      */
-    getPlayerStatus: async (token: string): Promise<GamepadPlayerStatus | null> => {
+    getPlayerStatus: async (token: string): Promise<KapulaPlayerStatus | null> => {
       const player = await store.getActivePlayerByToken(token);
       if (!player) return null;
       const session = await store.getActiveSessionById(player.sessionId);
@@ -448,4 +448,4 @@ export const createGamepadService = (
   };
 };
 
-export type GamepadService = ReturnType<typeof createGamepadService>;
+export type KapulaService = ReturnType<typeof createKapulaService>;

@@ -1,6 +1,6 @@
 import express from "express";
 import type { IncomingMessage } from "node:http";
-import type { GamepadAuth, GamepadHostUser } from "@kapula/server";
+import type { KapulaAuth, KapulaHostUser } from "@kapula/server";
 import type { HostConfig } from "./config.js";
 
 /**
@@ -33,7 +33,7 @@ export const createHostAuth = (config: HostConfig) => {
   const devIds = new Map<string, number>();
   const OWNER_ID = 1;
 
-  const userFor = (cookie: string | undefined): GamepadHostUser | null => {
+  const userFor = (cookie: string | undefined): KapulaHostUser | null => {
     if (!cookie) return null;
     if (config.ownerToken && cookie === `owner:${config.ownerToken}`) {
       return { id: OWNER_ID, email: config.ownerEmail };
@@ -50,7 +50,7 @@ export const createHostAuth = (config: HostConfig) => {
     return null;
   };
 
-  const auth: GamepadAuth = {
+  const auth: KapulaAuth = {
     getUserFromRequest: async (req: IncomingMessage) =>
       userFor(parseCookies(req.headers.cookie)[COOKIE]),
   };

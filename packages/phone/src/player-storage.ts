@@ -1,4 +1,4 @@
-import type { GamepadSessionState } from "@kapula/protocol";
+import type { KapulaSessionState } from "@kapula/protocol";
 
 /**
  * The player's session credential lives in localStorage so an accidentally
@@ -58,7 +58,7 @@ export const clearStoredPlayer = () => {
 const DEAD_CREDENTIAL_CLOSE_CODES = [4004, 4005, 4011];
 
 export const shouldDiscardStoredPlayer = (
-  snapshotState: GamepadSessionState | null,
+  snapshotState: KapulaSessionState | null,
   fatalCloseCode: number | null,
 ): boolean =>
   snapshotState === "ended" ||

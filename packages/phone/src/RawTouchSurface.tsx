@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { GamepadInputValue, GamepadRawTouch } from "@kapula/protocol";
+import type { KapulaInputValue, KapulaRawTouch } from "@kapula/protocol";
 import { useContentFrame } from "./OrientedSurface.js";
 import { pointerDeltaInFrame } from "./pointer-utils.js";
 import {
@@ -13,7 +13,7 @@ type RawTouchSurfaceProps = {
   width: number;
   height: number;
   disabled: boolean;
-  setControl: (id: string, value: GamepadInputValue, immediate: boolean) => void;
+  setControl: (id: string, value: KapulaInputValue, immediate: boolean) => void;
   /**
    * Drawn as a visible pad (a `touchpad` control) rather than the invisible
    * background a `raw` control is; the label sits faintly in its middle.
@@ -42,8 +42,8 @@ export const RawTouchSurface = ({
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   // pointerId → the finger's slot and position. A ref for the handlers, and
   // mirrored into state only to draw the finger markers.
-  const touchesRef = useRef(new Map<number, GamepadRawTouch>());
-  const [touches, setTouches] = useState<GamepadRawTouch[]>([]);
+  const touchesRef = useRef(new Map<number, KapulaRawTouch>());
+  const [touches, setTouches] = useState<KapulaRawTouch[]>([]);
   const { synthetic } = useContentFrame();
 
   const publish = (immediate: boolean) => {

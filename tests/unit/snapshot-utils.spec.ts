@@ -1,15 +1,15 @@
 import { test, expect } from "@playwright/test";
 import { applyServerMessage } from "@kapula/phone/utils";
 import {
-  GAMEPAD_PROTOCOL_VERSION,
-  gamepadSessionConfigSchema,
+  KAPULA_PROTOCOL_VERSION,
+  kapulaSessionConfigSchema,
 } from "@kapula/protocol";
 import type {
-  GamepadPlayerInfo,
-  GamepadSessionSnapshot,
+  KapulaPlayerInfo,
+  KapulaSessionSnapshot,
 } from "@kapula/protocol";
 
-const player = (id: string, extra: Partial<GamepadPlayerInfo> = {}): GamepadPlayerInfo => ({
+const player = (id: string, extra: Partial<KapulaPlayerInfo> = {}): KapulaPlayerInfo => ({
   playerId: id,
   name: `Name ${id}`,
   color: "#FF6B6B",
@@ -19,11 +19,11 @@ const player = (id: string, extra: Partial<GamepadPlayerInfo> = {}): GamepadPlay
   ...extra,
 });
 
-const snapshot: GamepadSessionSnapshot = {
-  protocolVersion: GAMEPAD_PROTOCOL_VERSION,
+const snapshot: KapulaSessionSnapshot = {
+  protocolVersion: KAPULA_PROTOCOL_VERSION,
   sessionId: "s1",
   state: "waiting_for_players",
-  config: gamepadSessionConfigSchema.parse({}),
+  config: kapulaSessionConfigSchema.parse({}),
   driverConnected: true,
   players: [player("p1"), player("p2")],
 };

@@ -1,9 +1,9 @@
 import { forwardRef, useState } from "react";
-import type { GamepadTextControl } from "@kapula/protocol";
-import { GAMEPAD_TEXT_MAX_LENGTH } from "@kapula/protocol";
+import type { KapulaTextControl } from "@kapula/protocol";
+import { KAPULA_TEXT_MAX_LENGTH } from "@kapula/protocol";
 
 type TextEntryProps = {
-  control: GamepadTextControl;
+  control: KapulaTextControl;
   onSend: (text: string) => void;
   onClose: () => void;
 };
@@ -23,7 +23,7 @@ type TextEntryProps = {
 export const TextEntry = forwardRef<HTMLInputElement, TextEntryProps>(
   ({ control, onSend, onClose }, ref) => {
     const [text, setText] = useState("");
-    const maxLength = control.maxLength ?? GAMEPAD_TEXT_MAX_LENGTH;
+    const maxLength = control.maxLength ?? KAPULA_TEXT_MAX_LENGTH;
     return (
       <form
         data-testid={`text-entry-${control.id}`}

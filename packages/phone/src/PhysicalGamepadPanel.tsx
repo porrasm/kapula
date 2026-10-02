@@ -1,4 +1,4 @@
-import type { GamepadInputValue, GamepadPlayerClientMessage } from "@kapula/protocol";
+import type { KapulaInputValue, KapulaPlayerClientMessage } from "@kapula/protocol";
 import { dpadToVector, PHYSICAL_GAMEPAD_CONTROLS } from "@kapula/protocol";
 import type { SeqCounter } from "./seq-counter.js";
 import { useInputSender } from "./useInputSender.js";
@@ -6,7 +6,7 @@ import { usePhysicalGamepad } from "./usePhysicalGamepad.js";
 import { useWakeLock } from "./useWakeLock.js";
 
 type PhysicalGamepadPanelProps = {
-  send: (msg: GamepadPlayerClientMessage) => void;
+  send: (msg: KapulaPlayerClientMessage) => void;
   /** Paused sessions and open menus render the panel inert. */
   disabled: boolean;
   /** The lobby trial shows the controller without holding a wake lock. */
@@ -86,7 +86,7 @@ export const PhysicalGamepadPreview = ({
   controls,
   dimmed = false,
 }: {
-  controls: Record<string, GamepadInputValue>;
+  controls: Record<string, KapulaInputValue>;
   dimmed?: boolean;
 }) => (
   <div

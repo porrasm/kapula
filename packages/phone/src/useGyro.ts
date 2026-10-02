@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
-import type { GamepadGyroControl, GamepadInputValue } from "@kapula/protocol";
+import type { KapulaGyroControl, KapulaInputValue } from "@kapula/protocol";
 import {
   gyroAxisValue,
   tiltAngleBetween,
@@ -170,10 +170,10 @@ export const useGyroInput = ({
   screenAngle,
   setControl,
 }: {
-  control: GamepadGyroControl | undefined;
+  control: KapulaGyroControl | undefined;
   enabled: boolean;
   screenAngle: ScreenAngle;
-  setControl: (id: string, value: GamepadInputValue, immediate: boolean) => void;
+  setControl: (id: string, value: KapulaInputValue, immediate: boolean) => void;
 }): { access: GyroAccess; recalibrate: () => void } => {
   const access = useGyroAccess();
   const neutralRef = useRef<GyroTilt | null>(null);

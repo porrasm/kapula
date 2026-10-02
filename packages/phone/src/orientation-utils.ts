@@ -6,7 +6,7 @@ import type { OrientationLock, Viewport } from "./layout-utils.js";
  * and never lets the OS re-lay it out mid-game. Kept free of React and the
  * DOM so the unit tests can drive every rotation case directly.
  *
- * The trouble this solves (see "Owning the orientation" in GAMEPAD.md): a
+ * The trouble this solves (see "Owning the orientation" in KAPULA.md): a
  * tilt past the auto-rotate threshold flips the viewport, which used to
  * re-layout an unlocked schema and replace a landscape one with a rotate
  * prompt — while the player was steering. And the natural defence, locking

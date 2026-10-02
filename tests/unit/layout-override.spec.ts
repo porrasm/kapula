@@ -24,7 +24,7 @@ import {
   type LayoutOverride,
 } from "@kapula/phone/utils";
 import { resolveLayout, type Viewport } from "@kapula/phone/utils";
-import { GENERIC_GAMEPAD_SCHEMA, type GamepadControl } from "@kapula/protocol";
+import { GENERIC_GAMEPAD_SCHEMA, type KapulaControl } from "@kapula/protocol";
 
 const LANDSCAPE: Viewport = { width: 844, height: 390 };
 const PORTRAIT: Viewport = { width: 390, height: 844 };
@@ -281,9 +281,9 @@ test.describe("storage shape", () => {
 test.describe("stick mode swapping", () => {
   // Typed as the control union: spreading a narrowed element would leave
   // the other members' fields in the spread type.
-  const full: GamepadControl = GENERIC_GAMEPAD_SCHEMA.controls.find((c) => c.id === "stick")!;
-  const relative: GamepadControl = { ...(full as Extract<GamepadControl, { type: "joystick" }>), mode: "relative" };
-  const xOnly: GamepadControl = { ...(full as Extract<GamepadControl, { type: "joystick" }>), mode: "x" };
+  const full: KapulaControl = GENERIC_GAMEPAD_SCHEMA.controls.find((c) => c.id === "stick")!;
+  const relative: KapulaControl = { ...(full as Extract<KapulaControl, { type: "joystick" }>), mode: "relative" };
+  const xOnly: KapulaControl = { ...(full as Extract<KapulaControl, { type: "joystick" }>), mode: "x" };
   const button = GENERIC_GAMEPAD_SCHEMA.controls.find((c) => c.id === "a")!;
   const layout = resolveLayout(GENERIC_GAMEPAD_SCHEMA, LANDSCAPE);
 

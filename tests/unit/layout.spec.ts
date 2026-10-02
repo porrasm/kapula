@@ -17,13 +17,13 @@ import { DEBUG_PRESETS } from "@kapula/phone/utils";
 import {
   GENERIC_GAMEPAD_SCHEMA,
   controlSchemaSchema,
-  gamepadSessionConfigSchema,
+  kapulaSessionConfigSchema,
 } from "@kapula/protocol";
 import type { ControlSchema } from "@kapula/protocol";
 
 const presetSchema = (key: string): ControlSchema => {
   const preset = DEBUG_PRESETS.find((p) => p.key === key)!;
-  return gamepadSessionConfigSchema.parse(preset.config).schemas[0];
+  return kapulaSessionConfigSchema.parse(preset.config).schemas[0];
 };
 
 const TANK = presetSchema("tank");

@@ -1,17 +1,17 @@
 import type { z } from "zod";
 import { GENERIC_GAMEPAD_SCHEMA } from "@kapula/protocol";
 import type {
-  GamepadInputValue,
-  GamepadMotionSample,
-  GamepadServerMessage,
-  GamepadSessionSnapshot,
-  gamepadSessionConfigSchema,
+  KapulaInputValue,
+  KapulaMotionSample,
+  KapulaServerMessage,
+  KapulaSessionSnapshot,
+  kapulaSessionConfigSchema,
 } from "@kapula/protocol";
 
 /** Pre-parse config shape: joystick `mode` etc. may be omitted in presets. */
-type GamepadSessionConfigInput = z.input<typeof gamepadSessionConfigSchema>;
+type KapulaSessionConfigInput = z.input<typeof kapulaSessionConfigSchema>;
 type ControlSchemaInput = NonNullable<
-  GamepadSessionConfigInput["schemas"]
+  KapulaSessionConfigInput["schemas"]
 >[number];
 
 /**
@@ -44,7 +44,7 @@ const TANK_SCHEMA: ControlSchemaInput = {
 
 // Also lets a player bring a real controller (paired with the phone): the
 // debug card then shows the fixed physical control set instead of the schema.
-const TANK_PRESET: Partial<GamepadSessionConfigInput> = {
+const TANK_PRESET: Partial<KapulaSessionConfigInput> = {
   game: "Tank Debug",
   driverAppUuid: DEBUG_DRIVER_APP_UUID,
   minPlayers: 1,
@@ -83,7 +83,7 @@ const XBOX_SCHEMA: ControlSchemaInput = {
   ],
 };
 
-const XBOX_PRESET: Partial<GamepadSessionConfigInput> = {
+const XBOX_PRESET: Partial<KapulaSessionConfigInput> = {
   game: "Xbox Debug",
   driverAppUuid: DEBUG_DRIVER_APP_UUID,
   minPlayers: 1,
@@ -104,7 +104,7 @@ const RACER_SCHEMA: ControlSchemaInput = {
   ],
 };
 
-const RACER_PRESET: Partial<GamepadSessionConfigInput> = {
+const RACER_PRESET: Partial<KapulaSessionConfigInput> = {
   game: "Racer Debug",
   driverAppUuid: DEBUG_DRIVER_APP_UUID,
   minPlayers: 1,
@@ -133,7 +133,7 @@ const AIM_SCHEMA: ControlSchemaInput = {
   ],
 };
 
-const AIM_PRESET: Partial<GamepadSessionConfigInput> = {
+const AIM_PRESET: Partial<KapulaSessionConfigInput> = {
   game: "Aim Debug",
   driverAppUuid: DEBUG_DRIVER_APP_UUID,
   minPlayers: 1,
@@ -158,7 +158,7 @@ const BRAWLER_SCHEMA: ControlSchemaInput = {
   ],
 };
 
-const BRAWLER_PRESET: Partial<GamepadSessionConfigInput> = {
+const BRAWLER_PRESET: Partial<KapulaSessionConfigInput> = {
   game: "Brawler Debug",
   driverAppUuid: DEBUG_DRIVER_APP_UUID,
   minPlayers: 1,
@@ -168,7 +168,7 @@ const BRAWLER_PRESET: Partial<GamepadSessionConfigInput> = {
 
 // Every built-in layout at once, so the lobby renders
 // its schema picker and layout switching can be exercised end to end.
-const MULTI_PRESET: Partial<GamepadSessionConfigInput> = {
+const MULTI_PRESET: Partial<KapulaSessionConfigInput> = {
   game: "Multi Debug",
   driverAppUuid: DEBUG_DRIVER_APP_UUID,
   minPlayers: 1,
@@ -189,7 +189,7 @@ const TILT_SCHEMA: ControlSchemaInput = {
   ],
 };
 
-const TILT_PRESET: Partial<GamepadSessionConfigInput> = {
+const TILT_PRESET: Partial<KapulaSessionConfigInput> = {
   game: "Tilt Debug",
   driverAppUuid: DEBUG_DRIVER_APP_UUID,
   minPlayers: 1,
@@ -219,7 +219,7 @@ const WII_SCHEMA: ControlSchemaInput = {
   ],
 };
 
-const WII_PRESET: Partial<GamepadSessionConfigInput> = {
+const WII_PRESET: Partial<KapulaSessionConfigInput> = {
   game: "Wii Debug",
   driverAppUuid: DEBUG_DRIVER_APP_UUID,
   minPlayers: 1,
@@ -249,7 +249,7 @@ const FIXED_SCHEMA: ControlSchemaInput = {
   ],
 };
 
-const FIXED_PRESET: Partial<GamepadSessionConfigInput> = {
+const FIXED_PRESET: Partial<KapulaSessionConfigInput> = {
   game: "Fixed Debug",
   driverAppUuid: DEBUG_DRIVER_APP_UUID,
   minPlayers: 1,
@@ -262,7 +262,7 @@ const FIXED_PRESET: Partial<GamepadSessionConfigInput> = {
 // every finger (x/y in 0–1 of the box). The second schema lays a button and
 // tilt over it: fingers on the button are the button's, every other finger
 // is raw. Pair it with a background image from the card below the setup.
-const TOUCH_PRESET: Partial<GamepadSessionConfigInput> = {
+const TOUCH_PRESET: Partial<KapulaSessionConfigInput> = {
   game: "Touch Debug",
   driverAppUuid: DEBUG_DRIVER_APP_UUID,
   minPlayers: 1,
@@ -310,7 +310,7 @@ const MOUSE_SCHEMA: ControlSchemaInput = {
   ],
 };
 
-const MOUSE_PRESET: Partial<GamepadSessionConfigInput> = {
+const MOUSE_PRESET: Partial<KapulaSessionConfigInput> = {
   game: "Remote Debug",
   driverAppUuid: DEBUG_DRIVER_APP_UUID,
   minPlayers: 1,
@@ -322,7 +322,7 @@ const MOUSE_PRESET: Partial<GamepadSessionConfigInput> = {
 // The party-game path: a free-text answer typed on the player's own
 // keyboard (sent whole on Send / Enter as a `text` message), next to two
 // buttons for voting.
-const QUIZ_PRESET: Partial<GamepadSessionConfigInput> = {
+const QUIZ_PRESET: Partial<KapulaSessionConfigInput> = {
   game: "Quiz Debug",
   driverAppUuid: DEBUG_DRIVER_APP_UUID,
   minPlayers: 1,
@@ -343,7 +343,7 @@ const QUIZ_PRESET: Partial<GamepadSessionConfigInput> = {
 
 // The recovery path: a game that already knows who is playing hands the
 // names and colors back at setup, and joining players only pick their slot.
-const ROSTER_PRESET: Partial<GamepadSessionConfigInput> = {
+const ROSTER_PRESET: Partial<KapulaSessionConfigInput> = {
   game: "Roster Debug",
   driverAppUuid: DEBUG_DRIVER_APP_UUID,
   schemas: [TANK_SCHEMA],
@@ -378,8 +378,8 @@ export const DEBUG_PRESETS: { key: string; label: string; config: object }[] = [
  * a plain new session is the right move).
  */
 export const buildRecoveryConfig = (
-  snapshot: GamepadSessionSnapshot,
-): GamepadSessionConfigInput | null => {
+  snapshot: KapulaSessionSnapshot,
+): KapulaSessionConfigInput | null => {
   if (snapshot.players.length === 0) return null;
   const { minPlayers: _min, maxPlayers: _max, ...rest } = snapshot.config;
   return {
@@ -390,7 +390,7 @@ export const buildRecoveryConfig = (
 
 /** The raw motion stream's tail: newest sample and recent sample arrivals. */
 export type DebugPlayerMotion = {
-  last: GamepadMotionSample;
+  last: KapulaMotionSample;
   /** Arrival timestamps (ms) of recent samples, oldest first. */
   recentAt: number[];
 };
@@ -398,7 +398,7 @@ export type DebugPlayerMotion = {
 /** Latest input frame per player, plus recent arrival times for a rate readout. */
 export type DebugPlayerInput = {
   seq: number;
-  controls: Record<string, GamepadInputValue>;
+  controls: Record<string, KapulaInputValue>;
   /** Arrival timestamps (ms) of recent frames, oldest first. */
   recentAt: number[];
   /** Present once a `motion` batch has arrived. */
@@ -414,7 +414,7 @@ const RATE_WINDOW_MS = 2000;
 /** Folds a relayed input message into the per-player input map. */
 export const recordInputFrame = (
   inputs: DebugInputs,
-  msg: Extract<GamepadServerMessage, { type: "input" }>,
+  msg: Extract<KapulaServerMessage, { type: "input" }>,
   now: number,
 ): DebugInputs => {
   const prev = inputs[msg.playerId];
@@ -441,7 +441,7 @@ export const recordInputFrame = (
  */
 export const recordMotionBatch = (
   inputs: DebugInputs,
-  msg: Extract<GamepadServerMessage, { type: "motion" }>,
+  msg: Extract<KapulaServerMessage, { type: "motion" }>,
   now: number,
 ): DebugInputs => {
   const prev = inputs[msg.playerId];
@@ -464,7 +464,7 @@ export const recordMotionBatch = (
 /** Folds a relayed `text` message in: the control's latest text. */
 export const recordTextMessage = (
   inputs: DebugInputs,
-  msg: Extract<GamepadServerMessage, { type: "text" }>,
+  msg: Extract<KapulaServerMessage, { type: "text" }>,
 ): DebugInputs => {
   const prev = inputs[msg.playerId];
   return {
@@ -504,7 +504,7 @@ export const appendDebugEvent = (
 ): DebugEvent[] => [...events, event].slice(-MAX_DEBUG_EVENTS);
 
 const playerName = (
-  snapshot: GamepadSessionSnapshot | null,
+  snapshot: KapulaSessionSnapshot | null,
   playerId: string,
 ): string =>
   snapshot?.players.find((p) => p.playerId === playerId)?.name ??
@@ -515,8 +515,8 @@ const playerName = (
  * log (input frames and pongs — inputs render live in the player cards).
  */
 export const describeServerMessage = (
-  msg: GamepadServerMessage,
-  snapshot: GamepadSessionSnapshot | null,
+  msg: KapulaServerMessage,
+  snapshot: KapulaSessionSnapshot | null,
 ): string | null => {
   switch (msg.type) {
     case "input":
