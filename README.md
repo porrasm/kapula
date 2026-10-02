@@ -1,5 +1,7 @@
 # Kapula
 
+Checkout the example app: gamepad.porras.club
+
 Phones as controllers for any game or desktop app. A game (the **driver**)
 claims a session over a small HTTP API, players open a web page on their
 phones and join with a code, and from then on every touch, tilt and button
