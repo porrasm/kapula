@@ -2,16 +2,31 @@
   "name": "@kapula/server",
   "version": "0.1.0",
   "description": "Kapula server core: sessions, signaling and the driver/player/host HTTP APIs over a pluggable store",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./testing": { "types": "./dist/testing/index.d.ts", "default": "./dist/testing/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing/index.js"
+    }
   },
-  "typesVersions": { "*": { "testing": ["./dist/testing/index.d.ts"] } },
-  "files": ["dist"],
+  "typesVersions": {
+    "*": {
+      "testing": [
+        "./dist/testing/index.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -b",
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
@@ -26,7 +41,9 @@
     "@playwright/test": ">=1.40"
   },
   "peerDependenciesMeta": {
-    "@playwright/test": { "optional": true }
+    "@playwright/test": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/express": "^4.17.21",

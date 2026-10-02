@@ -2,18 +2,33 @@
   "name": "@kapula/phone",
   "version": "0.1.0",
   "description": "Kapula phone UI: the React screens a player uses to join a session and play, host-agnostic",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./utils": { "types": "./dist/utils.d.ts", "default": "./dist/utils.js" },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils.d.ts",
+      "default": "./dist/utils.js"
+    },
     "./kapula.css": "./dist/kapula.css",
     "./tailwind-preset": "./dist/tailwind-preset.js"
   },
-  "typesVersions": { "*": { "utils": ["./dist/utils.d.ts"] } },
-  "files": ["dist"],
+  "typesVersions": {
+    "*": {
+      "utils": [
+        "./dist/utils.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -b && npm run copy-assets",
     "copy-assets": "cp src/kapula.css src/tailwind-preset.js dist/",

@@ -2,7 +2,8 @@
   "name": "kapula",
   "version": "0.0.0",
   "private": true,
-  "description": "Kapula: phones as controllers for any game or desktop app — protocol, server, phone UI and a reference host",
+  "description": "Kapula: phones as controllers for any game or desktop app \u2014 protocol, server, phone UI and a reference host",
+  "license": "MIT",
   "type": "module",
   "workspaces": [
     "packages/protocol",

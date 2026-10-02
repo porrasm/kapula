@@ -24,7 +24,7 @@ import {
   type LayoutOverride,
 } from "@kapula/phone/utils";
 import { resolveLayout, type Viewport } from "@kapula/phone/utils";
-import { GENERIC_GAMEPAD_SCHEMA } from "@kapula/protocol";
+import { GENERIC_GAMEPAD_SCHEMA, type GamepadControl } from "@kapula/protocol";
 
 const LANDSCAPE: Viewport = { width: 844, height: 390 };
 const PORTRAIT: Viewport = { width: 390, height: 844 };
@@ -279,18 +279,18 @@ test.describe("storage shape", () => {
  * that changes the wire shape.
  */
 test.describe("stick mode swapping", () => {
-  const full = GENERIC_GAMEPAD_SCHEMA.controls.find((c) => c.id === "stick")!;
-  const relative = { ...full, mode: "relative" as const };
-  const xOnly = { ...full, mode: "x" as const };
+  // Typed as the control union: spreading a narrowed element would leave
+  // the other members' fields in the spread type.
+  const full: GamepadControl = GENERIC_GAMEPAD_SCHEMA.controls.find((c) => c.id === "stick")!;
+  const relative: GamepadControl = { ...(full as Extract<GamepadControl, { type: "joystick" }>), mode: "relative" };
+  const xOnly: GamepadControl = { ...(full as Extract<GamepadControl, { type: "joystick" }>), mode: "x" };
   const button = GENERIC_GAMEPAD_SCHEMA.controls.find((c) => c.id === "a")!;
   const layout = resolveLayout(GENERIC_GAMEPAD_SCHEMA, LANDSCAPE);
 
   test("only full and relative sticks are toggleable", () => {
     expect(isStickModeToggleable(full)).toBe(true);
     expect(isStickModeToggleable(relative)).toBe(true);
-    expect(
-      isStickModeToggleable(xOnly as unknown as Parameters<typeof isStickModeToggleable>[0]),
-    ).toBe(false);
+    expect(isStickModeToggleable(xOnly)).toBe(false);
     expect(isStickModeToggleable(button)).toBe(false);
     expect(toggleStickMode(null, "landscape", xOnly)).toBeNull();
     expect(toggleStickMode(null, "landscape", button)).toBeNull();
@@ -330,7 +330,8 @@ test.describe("stick mode swapping", () => {
     };
     const xSchema = { ...GENERIC_GAMEPAD_SCHEMA, controls: [xOnly, button] };
     const applied = applyLayoutOverride(resolveLayout(xSchema, LANDSCAPE), override, LANDSCAPE);
-    expect(applied.controls.find((c) => c.control.id === "stick")!.control.mode).toBe("x");
+    const stick = applied.controls.find((c) => c.control.id === "stick")!.control;
+    expect(stick.type === "joystick" ? stick.mode : null).toBe("x");
   });
 
   test("box edits and stick modes coexist, and moves keep the modes", () => {

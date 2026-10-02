@@ -41,7 +41,7 @@ test.describe("applyServerMessage", () => {
 
   test("events before the first snapshot are ignored", () => {
     expect(
-      applyServerMessage(null, { type: "state_changed", state: "paused" }),
+      applyServerMessage(null, { type: "state_changed", state: "paused", reason: "driver_command" }),
     ).toBeNull();
     expect(
       applyServerMessage(null, { type: "player_joined", player: player("p9") }),

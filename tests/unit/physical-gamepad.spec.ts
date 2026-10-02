@@ -150,8 +150,13 @@ test.describe("applyStickDeadzone", () => {
 
 test.describe("diffPhysicalControls", () => {
   test("splits edges from movement and skips unchanged controls", () => {
-    const next = { ...IDLE_PHYSICAL_GAMEPAD, a: true, dpad: "u" as const, lt: 0.5 };
-    next["left-stick"] = { x: 0.2, y: 0 };
+    const next: typeof IDLE_PHYSICAL_GAMEPAD = {
+      ...IDLE_PHYSICAL_GAMEPAD,
+      a: true,
+      dpad: "u",
+      lt: 0.5,
+      "left-stick": { x: 0.2, y: 0 },
+    };
     const diff = diffPhysicalControls(IDLE_PHYSICAL_GAMEPAD, next);
     expect(diff.immediate.sort()).toEqual(["a", "dpad"]);
     expect(diff.throttled.sort()).toEqual(["left-stick", "lt"]);
