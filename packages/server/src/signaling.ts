@@ -517,6 +517,11 @@ export const createSignaling = (
       ws.close(4000, "sessionId required");
       return;
     }
+    // Ids are decimal strings; a store must never see anything else.
+    if (!/^\d{1,18}$/.test(sessionIdParam)) {
+      ws.close(4000, "sessionId invalid");
+      return;
+    }
     const session = await store.getActiveSessionById(sessionIdParam);
     if (!session || session.ownerId !== user.id) {
       ws.close(4004, "Session not found");

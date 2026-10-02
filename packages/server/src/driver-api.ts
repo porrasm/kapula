@@ -156,7 +156,7 @@ export const createDriverRouter = (
 
   const router = express.Router();
 
-  router.post("/driver/setup", async (req, res) => {
+  router.post("/driver/setup", express.json(), async (req, res) => {
     try {
       if (setupRateLimiter.isLimited(rateLimitKey(req))) {
         return res
@@ -215,7 +215,7 @@ export const createDriverRouter = (
    * the driver authenticates with its owner's key and gets a session back,
    * so connecting controllers is "click start, show the QR code".
    */
-  router.post("/driver/create", async (req, res) => {
+  router.post("/driver/create", express.json(), async (req, res) => {
     try {
       if (setupRateLimiter.isLimited(rateLimitKey(req))) {
         return res

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512">
+  <!-- Home-screen icon: the launcher's gamepad glyph (see info/app-meta.tsx)
+       on the Yötivoli ground, inset so maskable/rounded crops keep it whole. -->
+  <rect width="24" height="24" fill="#16131F"/>
+  <g transform="translate(2.4 0.96) scale(0.8)" fill="none" stroke="#FF7A6E" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 9h12a4 4 0 0 1 4 4.5l-.5 3A2.6 2.6 0 0 1 17 18.6L15 16H9l-2 2.6A2.6 2.6 0 0 1 2.5 16.5l-.5-3A4 4 0 0 1 6 9z"/>
+    <path d="M8 12h3M9.5 10.5v3"/>
+    <circle cx="16" cy="12.5" r="0.6" fill="#FF7A6E" stroke="none"/>
+  </g>
+</svg>

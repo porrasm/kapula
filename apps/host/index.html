@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- No pinch zoom: stray gestures on the controller must not scale the
+         page (Safari ignores this — the phone package blocks the gesture
+         too). viewport-fit=cover runs the page under the notch and the home
+         indicator; the safe-area insets below keep content clear of them. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Kapula" />
+    <meta name="theme-color" content="#16131F" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+    <title>Kapula</title>
+    <style>
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) 0
+          env(safe-area-inset-left);
+      }
+      html {
+        touch-action: pan-x pan-y;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/web/main.tsx"></script>
+  </body>
+</html>

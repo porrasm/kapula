@@ -18,7 +18,7 @@ export { createPlayerApi, usePlayerApi, type PlayerApi } from "./player-api.js";
 export { PlayerHome, type PlayerHomeProps } from "./PlayerHome.js";
 export { JoinScreen } from "./JoinScreen.js";
 export { PlayerSession } from "./PlayerSession.js";
-export { PlayerList } from "./PlayerList.js";
+export { MissingRoster, PlayerList } from "./PlayerList.js";
 export { Controller } from "./Controller.js";
 export { OrientedSurface } from "./OrientedSurface.js";
 export { PhysicalGamepadPreview } from "./PhysicalGamepadPanel.js";

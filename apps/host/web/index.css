@@ -1,0 +1,12 @@
+@import "@kapula/phone/kapula.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-kp-bg-primary text-kp-text-primary antialiased;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+}

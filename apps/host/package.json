@@ -1,0 +1,36 @@
+{
+  "name": "kapula-host",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reference Kapula host: the server over an in-memory store plus the phone web app, for development, tests and self-hosting",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "node --import tsx src/main.ts",
+    "build": "tsc -p tsconfig.server.json && vite build",
+    "start": "node dist/server/main.js"
+  },
+  "dependencies": {
+    "@kapula/phone": "^0.1.0",
+    "@kapula/protocol": "^0.1.0",
+    "@kapula/server": "^0.1.0",
+    "@tanstack/react-query": "^5.103.2",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "wouter": "^3.11.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.0",
+    "tsx": "^4.19.0",
+    "vite": "^5.4.0"
+  }
+}
