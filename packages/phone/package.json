@@ -1,0 +1,38 @@
+{
+  "name": "@kapula/phone",
+  "version": "0.1.0",
+  "description": "Kapula phone UI: the React screens a player uses to join a session and play, host-agnostic",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./utils": { "types": "./dist/utils.d.ts", "default": "./dist/utils.js" },
+    "./kapula.css": "./dist/kapula.css",
+    "./tailwind-preset": "./dist/tailwind-preset.js"
+  },
+  "typesVersions": { "*": { "utils": ["./dist/utils.d.ts"] } },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b && npm run copy-assets",
+    "copy-assets": "cp src/kapula.css src/tailwind-preset.js dist/",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@kapula/protocol": "^0.1.0",
+    "zod": "^4.6.5"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^18.2.0 || ^19.0.0",
+    "react-dom": "^18.2.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.103.2",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

@@ -1,0 +1,35 @@
+/*
+ * Design tokens of the Kapula player screens. Every color is an RGB triplet
+ * (not a hex value) so Tailwind's opacity modifiers keep working — see
+ * tailwind-preset.js, which maps these onto the kp-* utilities. A host
+ * re-themes the controller by redefining the variables after this sheet;
+ * the defaults are the monorepo's "Yötivoli" palette, so there the controller
+ * looks exactly like the apps around it.
+ */
+:root {
+  --kp-bg-primary: 22 19 31;      /* page ground */
+  --kp-bg-secondary: 32 28 44;    /* cards */
+  --kp-bg-tertiary: 42 36 56;     /* raised elements, buttons */
+  --kp-bg-hover: 51 44 72;
+
+  --kp-text-primary: 240 237 247;
+  --kp-text-secondary: 201 195 217;
+  --kp-text-muted: 143 135 163;
+
+  --kp-border: 58 51 82;
+  --kp-border-light: 46 40 66;
+  --kp-border-dark: 32 28 44;
+
+  --kp-accent-primary: 255 122 110;        /* primary actions, pressed buttons */
+  --kp-accent-primary-hover: 255 145 135;
+  --kp-accent-on-primary: 22 19 31;        /* ink on top of any accent */
+  --kp-accent-success: 79 194 114;
+  --kp-accent-success-light: 126 221 158;
+  --kp-accent-warning: 255 181 71;
+  --kp-accent-danger: 255 107 120;
+  --kp-accent-danger-light: 255 154 164;
+
+  --kp-radius: 0.75rem;      /* buttons, inputs */
+  --kp-radius-lg: 1.375rem;  /* cards */
+  --kp-shadow-card: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px rgba(0, 0, 0, 0.35);
+}
