@@ -29,10 +29,10 @@ export const generateKapulaToken = (): string =>
 
 /**
  * Driver keys let a standalone driver create its own session (see KAPULA.md
- * "Driver keys"). The `gpk_` prefix makes a leaked key recognizable in logs
+ * "Driver keys"). The `kpk_` prefix makes a leaked key recognizable in logs
  * and secret scanners; the value after it is 32 random bytes.
  */
-export const KAPULA_DRIVER_KEY_PREFIX = "gpk_";
+export const KAPULA_DRIVER_KEY_PREFIX = "kpk_";
 /** Characters of the plain key kept for display in the key list. */
 export const KAPULA_DRIVER_KEY_DISPLAY_CHARS = 8;
 

@@ -1,6 +1,6 @@
 # The reference host: the Kapula server over an in-memory store plus the
 # phone web app, as one image. Configure with KAPULA_OWNER_TOKEN (the owner's
-# login), PORT (default 4310) and the GAMEPAD_* timing overrides.
+# login), PORT (default 4310) and the KAPULA_* timing overrides.
 FROM node:22-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./

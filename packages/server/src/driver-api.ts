@@ -32,9 +32,9 @@ import { isStoreConflict, type KapulaSessionRecord } from "./store.js";
  * would otherwise throttle each other). Production must not allow it — a
  * spoofable header must never bypass the brute-force guard.
  */
-const RATE_LIMIT_KEY_HEADER = "x-gamepad-ratelimit-key";
+const RATE_LIMIT_KEY_HEADER = "x-kapula-ratelimit-key";
 
-/** `Authorization: Bearer gpk_…` — the driver key on /driver/create. */
+/** `Authorization: Bearer kpk_…` — the driver key on /driver/create. */
 const getBearerKey = (req: express.Request): string | null => {
   const auth = req.headers.authorization;
   if (typeof auth !== "string") return null;

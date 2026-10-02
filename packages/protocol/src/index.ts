@@ -1,25 +1,27 @@
 import { z } from "zod";
 
 /**
- * Gamepad app: phones act as game controllers for an external "driver"
- * (a game or desktop client). This module is the wire protocol shared by the
- * backend, the player/host frontend, external drivers and the tests.
+ * Kapula: phones act as controllers for an external "driver" (a game or
+ * desktop app). This module is the wire protocol shared by the server, the
+ * phone UI, external drivers and the tests.
  *
- * Version 1 is PRE-RELEASE (unlocked 2026-10-02, frozen 2026-09-13 before
- * that): the protocol is being extracted into the Kapula packages and may
- * still change shape. Every known driver author is told before a breaking
- * change lands. Within a version the rules stay additive — new optional
- * fields, new message types, new enum values; never remove, rename or
- * repurpose anything without bumping this constant — because clients ignore
- * what they do not recognize. Version 1 freezes again, for good, at the first
- * stable Kapula release; from then on anything else is version 2, served
- * next to 1 and negotiated with `protocolVersion` at setup.
+ * Version 2 is the Kapula wire: version 1 was the "gamepad" app's, and the
+ * bump marks the renamed paths (`/api/kapula`), header
+ * (`x-kapula-ratelimit-key`) and key prefix (`kpk_`); the messages
+ * themselves did not change. It is PRE-RELEASE until the first stable Kapula
+ * release — the shape may still change, and every known driver author is
+ * told before a breaking change lands. Within a version the rules are
+ * additive — new optional fields, new message types, new enum values; never
+ * remove, rename or repurpose anything without bumping this constant —
+ * because clients ignore what they do not recognize. At the stable release
+ * the version freezes for good; from then on anything else is version 3,
+ * served next to 2 and negotiated with `protocolVersion` at setup.
  *
  * Drivers receive the version in the setup response and in every snapshot.
  * See docs/KAPULA.md in the repository for the full protocol documentation
  * and docs/BACKLOG.md for the work list.
  */
-export const KAPULA_PROTOCOL_VERSION = 1;
+export const KAPULA_PROTOCOL_VERSION = 2;
 
 /**
  * How long a session survives without its driver. A driver that stays away
@@ -1202,9 +1204,9 @@ export type KapulaDriverSetupRequest = z.infer<
 >;
 
 /**
- * `POST /api/gamepad/driver/create` — the standalone-driver entry point:
+ * `POST /api/kapula/driver/create` — the standalone-driver entry point:
  * instead of a host reading a setup code out of the web app, the driver
- * authenticates with its owner's driver key (`Authorization: Bearer gpk_…`)
+ * authenticates with its owner's driver key (`Authorization: Bearer kpk_…`)
  * and the session is created for it. The response is a setup response.
  */
 export const kapulaDriverCreateRequestSchema = z.object({
@@ -1233,7 +1235,7 @@ export type KapulaDriverSetupResponse = {
   joinUrl: string;
   /** Credential for the driver WebSocket; store it to survive reconnects. */
   driverToken: string;
-  /** WebSocket path on the same host, e.g. /api/gamepad/ws?role=driver&token=… */
+  /** WebSocket path on the same host, e.g. /api/kapula/ws?role=driver&token=… */
   wsPath: string;
   /** The same socket as an absolute URL — connect to this and skip the join. */
   wsUrl: string;

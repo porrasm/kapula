@@ -228,7 +228,7 @@ test.describe("overrides on top of the engine's layout", () => {
 test.describe("storage shape", () => {
   test("keys are namespaced by driver app, schema and mode", () => {
     expect(layoutStorageKey("uuid-1", "tank", "landscape")).toBe(
-      "gamepad:layout:uuid-1:tank:landscape",
+      "kapula:layout:uuid-1:tank:landscape",
     );
     expect(layoutStorageKey("uuid-1", "tank", "one-hand")).not.toBe(
       layoutStorageKey("uuid-1", "tank", "landscape"),

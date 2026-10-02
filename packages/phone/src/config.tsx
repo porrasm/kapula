@@ -6,20 +6,19 @@ import "./kapula.css";
  * host page — the monorepo's Kapula app today, a desktop app's built-in
  * server later — and the host says where the Kapula HTTP API lives; the
  * screens derive every URL from that. Nothing in this folder may hardcode a
- * path or import from the host (tests/unit/gamepad-player-boundary.spec.ts
- * enforces it).
+ * path or import from the host.
  */
 export type KapulaPlayerConfig = {
   /**
    * Base of the Kapula HTTP API without a trailing slash: a path on the same
-   * origin ("/api/gamepad") or an absolute URL. The player routes and the
+   * origin ("/api/kapula") or an absolute URL. The player routes and the
    * session WebSocket hang under it ("<apiBase>/join", "<apiBase>/ws").
    */
   apiBase: string;
 };
 
 export const KAPULA_PLAYER_DEFAULTS: KapulaPlayerConfig = {
-  apiBase: "/api/gamepad",
+  apiBase: "/api/kapula",
 };
 
 const ConfigContext = createContext<KapulaPlayerConfig>(KAPULA_PLAYER_DEFAULTS);

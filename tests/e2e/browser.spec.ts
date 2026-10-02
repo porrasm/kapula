@@ -23,7 +23,7 @@ const TANK_CONFIG = {
 
 /** Fresh host user per test run: sessions are one-per-user. */
 const uniqueEmail = () =>
-  `gamepad-e2e-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`;
+  `kapula-e2e-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`;
 
 const createHostSession = async (page: Page): Promise<string> => {
   await page.goto(`/auth/dev-login?email=${encodeURIComponent(uniqueEmail())}`);

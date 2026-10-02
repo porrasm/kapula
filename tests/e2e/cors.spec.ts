@@ -9,7 +9,7 @@ import { WsClient } from "./ws-utils";
  * If any of these fail, a browser driver cannot connect at all.
  */
 const GAME_ORIGIN = "https://game.example.com";
-const SETUP_URL = `${HOST_URL}/api/gamepad/driver/setup`;
+const SETUP_URL = `${HOST_URL}/api/kapula/driver/setup`;
 
 test("driver setup preflight allows the game origin", async ({ request }) => {
   const res = await request.fetch(SETUP_URL, {
@@ -41,7 +41,7 @@ test("driver setup responses carry CORS headers, error statuses included", async
     headers: {
       Origin: GAME_ORIGIN,
       "Content-Type": "application/json",
-      "x-gamepad-ratelimit-key": crypto.randomUUID(),
+      "x-kapula-ratelimit-key": crypto.randomUUID(),
     },
     data: { setupCode: "ZZZZZZ" },
   });

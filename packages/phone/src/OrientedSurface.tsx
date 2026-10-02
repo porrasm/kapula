@@ -29,6 +29,7 @@ import {
   type LandscapeAngle,
 } from "./orientation-utils.js";
 import { useSafeAreaInsets } from "./safe-area.js";
+import { STORAGE_PREFIX, storageGet, storageSet } from "./storage.js";
 
 /**
  * The surface a controller plays on. It owns the orientation (the pure
@@ -100,23 +101,15 @@ const usePhysicalAngle = (): ScreenAngle =>
 
 // --- The player's landscape direction, remembered across games ---
 
-const LANDSCAPE_ANGLE_KEY = "gamepad:landscape-angle";
+const LANDSCAPE_ANGLE_KEY = `${STORAGE_PREFIX}landscape-angle`;
 
 const loadLandscapeAngle = (): LandscapeAngle => {
-  try {
-    const raw = localStorage.getItem(LANDSCAPE_ANGLE_KEY);
-    return raw === "270" ? 270 : DEFAULT_LANDSCAPE_ANGLE;
-  } catch {
-    return DEFAULT_LANDSCAPE_ANGLE;
-  }
+  return storageGet(LANDSCAPE_ANGLE_KEY) === "270" ? 270 : DEFAULT_LANDSCAPE_ANGLE;
 };
 
 const saveLandscapeAngle = (angle: LandscapeAngle) => {
-  try {
-    localStorage.setItem(LANDSCAPE_ANGLE_KEY, String(angle));
-  } catch {
-    /* private mode etc. — the default direction is used next time */
-  }
+  // Best effort: in private mode the default direction is used next time.
+  storageSet(LANDSCAPE_ANGLE_KEY, String(angle));
 };
 
 // --- The surface ---

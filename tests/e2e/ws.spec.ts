@@ -31,9 +31,9 @@ import {
  * API, the host and player JSON APIs and raw WebSocket connections for all
  * three roles. Complements browser.spec.ts, which drives the real frontend.
  *
- * NOTE: /api/gamepad/driver/setup is rate limited (10/min per bucket). The
+ * NOTE: /api/kapula/driver/setup is rate limited (10/min per bucket). The
  * driverSetup helper scopes every call to its own dev-only bucket (the
- * host honors an x-gamepad-ratelimit-key header outside production), so
+ * host honors an x-kapula-ratelimit-key header outside production), so
  * spec files and repeat runs against a live backend never throttle each
  * other; the rate-limit test fills one fixed bucket on purpose.
  */
@@ -78,11 +78,11 @@ test.describe("connection validation and close codes", () => {
     try {
       const ownerCookie = await devLogin(
         ownerCtx,
-        uniqueEmail("gamepad-ws-owner"),
+        uniqueEmail("kapula-ws-owner"),
       );
       const strangerCookie = await devLogin(
         strangerCtx,
-        uniqueEmail("gamepad-ws-stranger"),
+        uniqueEmail("kapula-ws-stranger"),
       );
       const { sessionId } = await createHostSession(ownerCtx);
 
@@ -183,7 +183,7 @@ test.describe.serial("full protocol flow over one session", () => {
 
   test.beforeAll(async () => {
     ctx = await newContext();
-    hostCookie = await devLogin(ctx, uniqueEmail("gamepad-ws-host"));
+    hostCookie = await devLogin(ctx, uniqueEmail("kapula-ws-host"));
     const created = await createHostSession(ctx);
     sessionId = created.sessionId;
     const setup = await driverSetup(ctx, created.setupCode, CONFIG);
@@ -205,7 +205,7 @@ test.describe.serial("full protocol flow over one session", () => {
     expect(joinCode).toMatch(CODE_PATTERN);
     expect(setupBody.joinUrl).toContain(`join/${joinCode}`);
     expect(setupBody.wsPath).toBe(
-      `/api/gamepad/ws?role=driver&token=${driverToken}`,
+      `/api/kapula/ws?role=driver&token=${driverToken}`,
     );
     // wsUrl is the same socket, absolute, so a driver never has to know the
     // base URL it was set up through.
@@ -656,7 +656,7 @@ test.describe.serial("full protocol flow over one session", () => {
       "hex",
     );
     const cursors = [p1, p2, host, driver].map((c) => c.mark());
-    const posted = await ctx.post("/api/gamepad/driver/background?fit=contain", {
+    const posted = await ctx.post("/api/kapula/driver/background?fit=contain", {
       headers: { Authorization: `Bearer ${driverToken}` },
       data: png,
     });
@@ -683,16 +683,16 @@ test.describe.serial("full protocol flow over one session", () => {
     expect(Buffer.from(await image.body()).equals(png)).toBe(true);
 
     // Not an image, or no driver token: refused, nothing broadcast.
-    const svg = await ctx.post("/api/gamepad/driver/background", {
+    const svg = await ctx.post("/api/kapula/driver/background", {
       headers: { Authorization: `Bearer ${driverToken}` },
       data: "<svg xmlns='http://www.w3.org/2000/svg'/>",
     });
     expect(svg.status()).toBe(415);
-    const anonymous = await ctx.post("/api/gamepad/driver/background", { data: png });
+    const anonymous = await ctx.post("/api/kapula/driver/background", { data: png });
     expect(anonymous.status()).toBe(401);
 
     const cursor = p1.mark();
-    const removed = await ctx.delete("/api/gamepad/driver/background", {
+    const removed = await ctx.delete("/api/kapula/driver/background", {
       headers: { Authorization: `Bearer ${driverToken}` },
     });
     expect(removed.status()).toBe(200);
@@ -1161,7 +1161,7 @@ test.describe.serial("lobby round trip and late join", () => {
 
   test.beforeAll(async () => {
     ctx = await newContext();
-    await devLogin(ctx, uniqueEmail("gamepad-late-join"));
+    await devLogin(ctx, uniqueEmail("kapula-late-join"));
     const created = await createHostSession(ctx);
     const setup = await driverSetup(ctx, created.setupCode, {
       game: "Late Join Test",
@@ -1380,7 +1380,7 @@ test.describe.serial("session without a lobby (skipLobby)", () => {
 
   test.beforeAll(async () => {
     ctx = await newContext();
-    await devLogin(ctx, uniqueEmail("gamepad-skip-lobby"));
+    await devLogin(ctx, uniqueEmail("kapula-skip-lobby"));
     const created = await createHostSession(ctx);
     const setup = await driverSetup(ctx, created.setupCode, {
       game: "Remote Test",
@@ -1442,7 +1442,7 @@ test.describe.serial("roster session", () => {
 
   test.beforeAll(async () => {
     ctx = await newContext();
-    await devLogin(ctx, uniqueEmail("gamepad-ws-roster"));
+    await devLogin(ctx, uniqueEmail("kapula-ws-roster"));
     const created = await createHostSession(ctx);
     const setup = await driverSetup(ctx, created.setupCode, {
       game: "Roster Test",
@@ -1591,7 +1591,7 @@ test.describe.serial("driver keys", () => {
 
   test.beforeAll(async () => {
     ctx = await newContext();
-    cookie = await devLogin(ctx, uniqueEmail("gamepad-driver-key"));
+    cookie = await devLogin(ctx, uniqueEmail("kapula-driver-key"));
     const created = await hostCall(ctx, "createDriverKey", {
       name: "Tank Game on the PC",
     });
@@ -1604,7 +1604,7 @@ test.describe.serial("driver keys", () => {
   });
 
   test("the key is returned once, listed by prefix only", async () => {
-    expect(key.startsWith("gpk_")).toBe(true);
+    expect(key.startsWith("kpk_")).toBe(true);
     const list = await hostCall(ctx, "listDriverKeys");
     expect(list.data).toHaveLength(1);
     expect(list.data[0].name).toBe("Tank Game on the PC");
@@ -1615,9 +1615,9 @@ test.describe.serial("driver keys", () => {
   });
 
   test("an unknown or malformed key is refused", async () => {
-    expect((await driverCreate(ctx, "gpk_nope")).status).toBe(401);
-    const missing = await ctx.post("/api/gamepad/driver/create", {
-      headers: { "x-gamepad-ratelimit-key": crypto.randomUUID() },
+    expect((await driverCreate(ctx, "kpk_nope")).status).toBe(401);
+    const missing = await ctx.post("/api/kapula/driver/create", {
+      headers: { "x-kapula-ratelimit-key": crypto.randomUUID() },
       data: {},
     });
     expect(missing.status()).toBe(401);
@@ -1699,7 +1699,7 @@ test.describe.serial("driver keys", () => {
     });
     expect(endOther.error).toBeUndefined();
     const stranger = await newContext();
-    await devLogin(stranger, uniqueEmail("gamepad-key-stranger"));
+    await devLogin(stranger, uniqueEmail("kapula-key-stranger"));
     const foreign = await hostCall(stranger, "endMySession", {
       sessionId: created.body.sessionId,
     });
@@ -1760,7 +1760,7 @@ test.describe.serial("private sessions", () => {
   let owner: APIRequestContext;
   let partner: APIRequestContext;
   let stranger: APIRequestContext;
-  const partnerEmail = uniqueEmail("gamepad-private-partner");
+  const partnerEmail = uniqueEmail("kapula-private-partner");
   let session: Awaited<ReturnType<typeof driverCreate>>;
   let driver: WsClient;
 
@@ -1768,9 +1768,9 @@ test.describe.serial("private sessions", () => {
     owner = await newContext();
     partner = await newContext();
     stranger = await newContext();
-    await devLogin(owner, uniqueEmail("gamepad-private-owner"));
+    await devLogin(owner, uniqueEmail("kapula-private-owner"));
     await devLogin(partner, partnerEmail);
-    await devLogin(stranger, uniqueEmail("gamepad-private-stranger"));
+    await devLogin(stranger, uniqueEmail("kapula-private-stranger"));
     // Linked by email, typed in any case: stored lowercased.
     const key = await hostCall(owner, "createDriverKey", {
       name: "Living room PC",
@@ -1873,7 +1873,7 @@ test.describe.serial("websocket keepalive", () => {
   });
 
   test("a socket that stops answering pings is terminated", async () => {
-    await devLogin(ctx, uniqueEmail("gamepad-ws-keepalive"));
+    await devLogin(ctx, uniqueEmail("kapula-ws-keepalive"));
     const created = await createHostSession(ctx);
     const setup = await driverSetup(ctx, created.setupCode, { minPlayers: 1 });
     const join = await joinSession(ctx, setup.body.joinCode!);
@@ -1935,7 +1935,7 @@ test.describe.serial("driver-lost watchdog", () => {
   });
 
   test("a dropped driver that stays away ends the session as driver_lost", async () => {
-    cookie = await devLogin(ctx, uniqueEmail("gamepad-ws-lost"));
+    cookie = await devLogin(ctx, uniqueEmail("kapula-ws-lost"));
     const created = await createHostSession(ctx);
     const setup = await driverSetup(ctx, created.setupCode, { minPlayers: 1 });
     const host = await WsClient.open(
@@ -2011,7 +2011,7 @@ test.describe.serial("driver-lost watchdog", () => {
   });
 
   test("a driver that claims a session but never connects loses it too", async () => {
-    await devLogin(ctx, uniqueEmail("gamepad-ws-lost2"));
+    await devLogin(ctx, uniqueEmail("kapula-ws-lost2"));
     const created = await createHostSession(ctx);
     const setup = await driverSetup(ctx, created.setupCode);
     const join = await joinSession(ctx, setup.body.joinCode!);
@@ -2041,7 +2041,7 @@ test.describe.serial("host escape hatch on a live session", () => {
   });
 
   test("host end reaches driver and players as host_ended + 4005", async () => {
-    await devLogin(ctx, uniqueEmail("gamepad-ws-host2"));
+    await devLogin(ctx, uniqueEmail("kapula-ws-host2"));
     const created = await createHostSession(ctx);
 
     // Only one active session per user.
@@ -2112,8 +2112,8 @@ test.describe.serial("host escape hatch on a live session", () => {
 
 test.describe("driver setup endpoint validation", () => {
   test("rejects malformed requests and unknown codes", async ({ request }) => {
-    const missingCode = await request.post("/api/gamepad/driver/setup", {
-      headers: { "x-gamepad-ratelimit-key": crypto.randomUUID() },
+    const missingCode = await request.post("/api/kapula/driver/setup", {
+      headers: { "x-kapula-ratelimit-key": crypto.randomUUID() },
       data: {},
     });
     expect(missingCode.status()).toBe(400);
@@ -2136,7 +2136,7 @@ test.describe("driver setup endpoint validation", () => {
   test("a driver may ask for a protocol version it can speak", async () => {
     const ctx = await newContext();
     try {
-      await devLogin(ctx, uniqueEmail("gamepad-version"));
+      await devLogin(ctx, uniqueEmail("kapula-version"));
       const created = await createHostSession(ctx);
 
       // A version this server does not serve is refused before the setup
@@ -2202,7 +2202,7 @@ test.describe("wire contract", () => {
 // dev-only bucket header), so nothing else — this run's other tests, or the
 // next run against the same live backend — is throttled by it. The window
 // logic itself is unit-tested with a fake clock (createRateLimiter in
-// gamepad-logic.spec.ts).
+// logic.spec.ts).
 test.describe("driver setup rate limiting", () => {
   test("the 11th call inside a minute is rejected with 429", async ({
     request,

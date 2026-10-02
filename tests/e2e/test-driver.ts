@@ -36,11 +36,11 @@ export class TestDriver {
     setupCode: string,
     config?: unknown,
   ): Promise<SetupResponse> {
-    const response = await request.post("/api/gamepad/driver/setup", {
+    const response = await request.post("/api/kapula/driver/setup", {
       // A unique dev-only rate-limit bucket per call: every test run shares
       // localhost and the dev backend keeps its 10/min window across runs,
       // so unscoped calls would throttle unrelated tests and repeat runs.
-      headers: { "x-gamepad-ratelimit-key": crypto.randomUUID() },
+      headers: { "x-kapula-ratelimit-key": crypto.randomUUID() },
       data: { setupCode, ...(config !== undefined ? { config } : {}) },
     });
     const body = (await response.json()) as SetupResponse;

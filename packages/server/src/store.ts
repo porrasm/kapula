@@ -9,7 +9,7 @@ import type { KapulaSessionState } from "@kapula/protocol";
  * in-memory store (`memory-store.ts`).
  *
  * Semantics every implementation must honour (the conformance suite in
- * `tests/unit/gamepad-store-conformance.ts` checks them):
+ * the conformance suite in `testing/store-conformance.ts` checks them):
  *
  * - "Active" means not ended (sessions) or not left (players). Lookups by
  *   code, token or key only ever find active rows; ended and left rows are

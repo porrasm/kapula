@@ -324,7 +324,7 @@ test.describe("default name and color assignment", () => {
 test.describe("createRateLimiter", () => {
   // The driver setup endpoint uses this with a 60s window; the fake clock
   // lets the tests cover that window in microseconds (the e2e variant that
-  // waits out the real window is opt-in, see gamepad-ws.spec.ts).
+  // waits out the real window is opt-in, see ws.spec.ts).
   const makeLimiter = () => {
     const clock = { at: 0 };
     const limiter = createRateLimiter({
@@ -456,9 +456,9 @@ test.describe("state gates", () => {
 
   test("driver keys are prefixed, hashed and displayed by their head", () => {
     const key = generateDriverKey();
-    // gpk_ makes a leaked key recognizable to a log scanner; 32 random bytes
+    // kpk_ makes a leaked key recognizable to a log scanner; 32 random bytes
     // is the credential itself.
-    expect(key).toMatch(/^gpk_[0-9a-f]{64}$/);
+    expect(key).toMatch(/^kpk_[0-9a-f]{64}$/);
     expect(generateDriverKey()).not.toBe(key);
 
     // Only the hash is ever stored, and it is stable per key.

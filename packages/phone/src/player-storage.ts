@@ -1,3 +1,4 @@
+import { STORAGE_PREFIX, storageGet, storageRemove, storageSet } from "./storage.js";
 import type { KapulaSessionState } from "@kapula/protocol";
 
 /**
@@ -10,11 +11,11 @@ export type StoredPlayer = {
   token: string;
 };
 
-const STORAGE_KEY = "gamepad:player";
+const STORAGE_KEY = `${STORAGE_PREFIX}player`;
 
 export const loadStoredPlayer = (): StoredPlayer | null => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = storageGet(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<StoredPlayer>;
     if (!parsed.sessionId || !parsed.playerId || !parsed.token) return null;
@@ -29,19 +30,12 @@ export const loadStoredPlayer = (): StoredPlayer | null => {
 };
 
 export const saveStoredPlayer = (player: StoredPlayer) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(player));
-  } catch {
-    /* private mode etc. — the session just won't survive a tab close */
-  }
+  // Best effort: in private mode the session just won't survive a tab close.
+  storageSet(STORAGE_KEY, JSON.stringify(player));
 };
 
 export const clearStoredPlayer = () => {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    /* ignore */
-  }
+  storageRemove(STORAGE_KEY);
 };
 
 /**

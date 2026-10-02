@@ -17,7 +17,7 @@ import { readConfig } from "./config.js";
 // apps/host, whether this file runs from src/ (tsx) or dist/server/ (built).
 const FILE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const HOST_DIR = path.resolve(FILE_DIR, path.basename(path.dirname(FILE_DIR)) === "dist" ? "../.." : "..");
-const API_BASE = "/api/gamepad";
+const API_BASE = "/api/kapula";
 
 const main = async () => {
   const config = readConfig(process.env);

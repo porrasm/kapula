@@ -2,6 +2,7 @@ import type { KapulaControl } from "@kapula/protocol";
 import type { ScreenAngle } from "./gyro-utils.js";
 import type { ResolvedLayout, Viewport } from "./layout-utils.js";
 import { rotateDelta, type ContentOrientation } from "./orientation-utils.js";
+import { STORAGE_PREFIX } from "./storage.js";
 
 /**
  * Player-edited controller layouts, the pure part: what is stored, how a
@@ -68,7 +69,7 @@ export const layoutStorageKey = (
   driverAppUuid: string,
   schemaId: string,
   mode: LayoutMode,
-): string => `gamepad:layout:${driverAppUuid}:${schemaId}:${mode}`;
+): string => `${STORAGE_PREFIX}layout:${driverAppUuid}:${schemaId}:${mode}`;
 
 /** The layout mode the engine picks on an oriented surface of this orientation. */
 export const layoutModeForOrientation = (

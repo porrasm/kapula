@@ -222,7 +222,7 @@ export const describeKapulaStoreConformance = (
           userId: ownerId,
           name: "Key",
           hash: token(),
-          prefix: "gpk_test",
+          prefix: "kpk_test",
           linkedEmails: [],
         });
         const keyed = await setUp({}, { ownerId, driverKeyId: key.id });
@@ -444,13 +444,13 @@ export const describeKapulaStoreConformance = (
           userId,
           name: "First",
           hash,
-          prefix: "gpk_aaaa",
+          prefix: "kpk_aaaa",
           linkedEmails: ["a@example.com"],
         });
         expect(first).toMatchObject({
           userId,
           name: "First",
-          prefix: "gpk_aaaa",
+          prefix: "kpk_aaaa",
           linkedEmails: ["a@example.com"],
           lastUsedAt: null,
         });
@@ -461,14 +461,14 @@ export const describeKapulaStoreConformance = (
           userId,
           name: "Second",
           hash: token(),
-          prefix: "gpk_bbbb",
+          prefix: "kpk_bbbb",
           linkedEmails: [],
         });
         const listed = (await store.getDriverKeysByUser(userId)).map((k) => k.id);
         expect(listed.indexOf(second.id)).toBeLessThan(listed.indexOf(first.id));
         expect(await store.getLiveDriverKeyByHash(hash)).toEqual(first);
         await expectConflict(() =>
-          store.insertDriverKey({ userId, name: "Dup", hash, prefix: "gpk_cccc", linkedEmails: [] }),
+          store.insertDriverKey({ userId, name: "Dup", hash, prefix: "kpk_cccc", linkedEmails: [] }),
         );
         await store.touchDriverKeyUsed(first.id);
         expect((await store.getLiveDriverKeyByHash(hash))?.lastUsedAt).toBeInstanceOf(Date);
@@ -482,7 +482,7 @@ export const describeKapulaStoreConformance = (
           userId: f.ownerId,
           name: "Mine",
           hash,
-          prefix: "gpk_dddd",
+          prefix: "kpk_dddd",
           linkedEmails: [],
         });
         expect(
@@ -521,7 +521,7 @@ export const describeKapulaStoreConformance = (
           userId: f.ownerId,
           name: "Living room",
           hash: token(),
-          prefix: "gpk_eeee",
+          prefix: "kpk_eeee",
           linkedEmails: [email],
         });
         const session = await setUp({ private: true }, { driverKeyId: key.id });

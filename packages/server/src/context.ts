@@ -48,7 +48,7 @@ export type KapulaServerConfig = {
   /** WebSocket-level ping interval; a client silent for two ticks is terminated. */
   keepaliveIntervalMs: number;
   /**
-   * Honour the `x-gamepad-ratelimit-key` header as the rate-limit bucket
+   * Honour the `x-kapula-ratelimit-key` header as the rate-limit bucket
    * instead of the caller IP. Test suites sharing localhost need it; never
    * enable it in production — a spoofable header must not bypass the
    * brute-force guard.
@@ -57,8 +57,8 @@ export type KapulaServerConfig = {
 };
 
 export const KAPULA_DEFAULT_CONFIG: KapulaServerConfig = {
-  basePath: "/api/gamepad",
-  playerAppPath: "/gamepad",
+  basePath: "/api/kapula",
+  playerAppPath: "/kapula",
   publicOrigin: null,
   driverLostTimeoutMs: KAPULA_DRIVER_LOST_TIMEOUT_MS,
   keepaliveIntervalMs: 30_000,

@@ -40,7 +40,7 @@ export class WsClient {
   }
 
   /**
-   * Opens a socket to /api/gamepad/ws with the given query string. Resolves on
+   * Opens a socket to /api/kapula/ws with the given query string. Resolves on
    * the WS handshake; the server's auth rejections complete the handshake and
    * then close with a 4xxx code, so use waitForClose() to observe them.
    */
@@ -56,7 +56,7 @@ export class WsClient {
     } = {},
   ): Promise<WsClient> {
     const url =
-      opts.url ?? `${HOST_URL.replace(/^http/, "ws")}/api/gamepad/ws${query}`;
+      opts.url ?? `${HOST_URL.replace(/^http/, "ws")}/api/kapula/ws${query}`;
     const ws = new WebSocket(url, {
       rejectUnauthorized: false,
       headers: opts.headers,
@@ -224,13 +224,13 @@ export type HostResult = {
 const upperCode = (code: string | undefined, status: number): string =>
   (code ?? (status === 404 ? "not_found" : status === 409 ? "conflict" : "bad_request")).toUpperCase();
 
-/** `POST /api/gamepad/host/<op>`: the host page's operations, as the logged-in user. */
+/** `POST /api/kapula/host/<op>`: the host page's operations, as the logged-in user. */
 export const hostCall = async (
   request: APIRequestContext,
   op: string,
   input?: unknown,
 ): Promise<HostResult> => {
-  const res = await request.post(`/api/gamepad/host/${op}`, { data: input ?? {} });
+  const res = await request.post(`/api/kapula/host/${op}`, { data: input ?? {} });
   const body = await res.json();
   const status = res.status();
   if (body.success) return { status, data: body.data, error: undefined };
@@ -295,8 +295,8 @@ export const driverSetup = async (
   rateLimitKey?: string,
   protocolVersion?: number,
 ): Promise<{ status: number; body: DriverSetupBody }> => {
-  const res = await request.post("/api/gamepad/driver/setup", {
-    headers: { "x-gamepad-ratelimit-key": rateLimitKey ?? crypto.randomUUID() },
+  const res = await request.post("/api/kapula/driver/setup", {
+    headers: { "x-kapula-ratelimit-key": rateLimitKey ?? crypto.randomUUID() },
     data: {
       setupCode,
       ...(config !== undefined ? { config } : {}),
@@ -307,7 +307,7 @@ export const driverSetup = async (
 };
 
 /**
- * `POST /api/gamepad/driver/create` — the driver-key entry point. Same shape
+ * `POST /api/kapula/driver/create` — the driver-key entry point. Same shape
  * of response as driverSetup, and the same per-call rate-limit bucket.
  */
 export const driverCreate = async (
@@ -315,9 +315,9 @@ export const driverCreate = async (
   key: string,
   body?: Record<string, unknown>,
 ): Promise<{ status: number; body: DriverSetupBody }> => {
-  const res = await request.post("/api/gamepad/driver/create", {
+  const res = await request.post("/api/kapula/driver/create", {
     headers: {
-      "x-gamepad-ratelimit-key": crypto.randomUUID(),
+      "x-kapula-ratelimit-key": crypto.randomUUID(),
       Authorization: `Bearer ${key}`,
     },
     data: body ?? {},
@@ -351,7 +351,7 @@ export const getJoinInfo = async (
   joinCode: string,
 ): Promise<HostResult> => {
   const result = await playerApiResult(
-    await request.get(`/api/gamepad/join-info/${encodeURIComponent(joinCode)}`),
+    await request.get(`/api/kapula/join-info/${encodeURIComponent(joinCode)}`),
   );
   return { ...result, data: result.data?.info };
 };
@@ -361,7 +361,7 @@ export const getPlayerStatus = async (
   token: string,
 ): Promise<HostResult> => {
   const result = await playerApiResult(
-    await request.post("/api/gamepad/player/status", { data: { token } }),
+    await request.post("/api/kapula/player/status", { data: { token } }),
   );
   return { ...result, data: result.data?.status };
 };
@@ -372,7 +372,7 @@ export const joinSession = async (
   name?: string,
 ): Promise<HostResult> =>
   playerApiResult(
-    await request.post("/api/gamepad/join", {
+    await request.post("/api/kapula/join", {
       data: name === undefined ? { joinCode } : { joinCode, name },
     }),
   );

@@ -1,11 +1,11 @@
 import type { KapulaHostOperation } from "@kapula/server";
 
 /**
- * The host page's client for `POST /api/gamepad/host/<op>` (see
+ * The host page's client for `POST /api/kapula/host/<op>` (see
  * @kapula/server host-api.ts): the payload on success, an Error carrying
  * the server's message otherwise.
  */
-export const API_BASE = "/api/gamepad";
+export const API_BASE = "/api/kapula";
 
 export const hostCall = async <T = unknown>(
   op: KapulaHostOperation,

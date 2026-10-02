@@ -206,7 +206,7 @@ test.describe("background image", () => {
     driverConnected: true,
     players: [],
   };
-  const background = { url: "/api/gamepad/background/abc", fit: "cover" as const };
+  const background = { url: "/api/kapula/background/abc", fit: "cover" as const };
 
   test("snapshots parse with and without one", () => {
     expect(kapulaSessionSnapshotSchema.safeParse(snapshot).success).toBe(true);
