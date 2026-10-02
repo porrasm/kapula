@@ -20,7 +20,9 @@
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "npm run build:packages && playwright test --project=unit",
     "test:e2e": "npm run build:packages && PW_E2E=1 playwright test --project=e2e",
-    "clean": "rm -rf packages/*/dist packages/*/tsconfig.tsbuildinfo apps/host/dist"
+    "clean": "rm -rf packages/*/dist packages/*/tsconfig.tsbuildinfo apps/host/dist",
+    "version:set": "node scripts/set-version.mjs",
+    "release": "node scripts/release.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
@@ -29,5 +31,9 @@
   },
   "engines": {
     "node": ">=22.12.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/porrasm/kapula.git"
   }
 }

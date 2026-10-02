@@ -50,6 +50,20 @@ memory and end with the process. For anything beyond one owner, implement
 `docs/KAPULA.md`, "Implementation map") and run the conformance suite
 against your store.
 
+## Release
+
+The three packages ship together, one version, pinned to each other exactly.
+After `npm login` (the `@kapula` scope):
+
+```sh
+node scripts/release.mjs 0.1.0-alpha.1 next --dry-run   # builds, tests, packs, publishes nothing
+node scripts/release.mjs 0.1.0-alpha.1 next             # pre-release under the "next" tag
+node scripts/release.mjs 0.1.0 latest                   # stable
+git push && git push --tags
+```
+
+Consumers install a pre-release with `npm install @kapula/server@next`.
+
 ## Documents
 
 - `docs/KAPULA.md` — the design and the protocol, section by section.

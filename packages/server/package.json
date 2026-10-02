@@ -3,6 +3,27 @@
   "version": "0.1.0",
   "description": "Kapula server core: sessions, signaling and the driver/player/host HTTP APIs over a pluggable store",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/porrasm/kapula.git",
+    "directory": "packages/server"
+  },
+  "homepage": "https://github.com/porrasm/kapula#readme",
+  "bugs": "https://github.com/porrasm/kapula/issues",
+  "keywords": [
+    "kapula",
+    "controller",
+    "gamepad",
+    "phone",
+    "websocket",
+    "express"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -28,6 +49,7 @@
     "LICENSE"
   ],
   "scripts": {
+    "prepublishOnly": "npm run clean && npm run build",
     "build": "tsc -b",
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },

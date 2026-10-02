@@ -3,6 +3,27 @@
   "version": "0.1.0",
   "description": "Kapula phone UI: the React screens a player uses to join a session and play, host-agnostic",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/porrasm/kapula.git",
+    "directory": "packages/phone"
+  },
+  "homepage": "https://github.com/porrasm/kapula#readme",
+  "bugs": "https://github.com/porrasm/kapula/issues",
+  "keywords": [
+    "kapula",
+    "controller",
+    "gamepad",
+    "phone",
+    "websocket",
+    "react"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -30,6 +51,7 @@
     "LICENSE"
   ],
   "scripts": {
+    "prepublishOnly": "npm run clean && npm run build",
     "build": "tsc -b && npm run copy-assets",
     "copy-assets": "cp src/kapula.css src/tailwind-preset.js dist/",
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
