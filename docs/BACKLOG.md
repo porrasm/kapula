@@ -9,13 +9,12 @@ What is next, in order. The history of the gamepad app before the extraction
    monorepo (12 of its 15 tests; the debug-driver and help-page tests test
    monorepo pages) but has not run yet — the session that did the port could
    not launch Chromium. First green CI run is the gate.
-2. **Rename.** Protocol version 1 is unlocked until the first stable release
-   (see KAPULA.md "Protocol version 1 — pre-release"). Decide the public names
-   while nobody depends on the packages: the API base (`/api/gamepad` →
-   `/api/kapula`?), the `x-gamepad-ratelimit-key` header, the `GAMEPAD_*`
-   environment variables and exports, the `Gamepad*` identifiers, the
-   `gpk_` key prefix. One protocol version bump marks the new wire. Update
-   KAPULA.md, the host and the monorepo's adoption notes together.
+2. **Rename — done 2026-10-02.** Identifiers carry a Kapula prefix, the wire
+   is `/api/kapula` + `x-kapula-ratelimit-key` + `kpk_`, protocol version 2.
+   Left as they were: the `Gamepad*` names of the physical-controller bridge
+   (correct), and the monorepo, which keeps serving version 1 under
+   `/api/gamepad` until it adopts the packages. Tell the one external driver
+   author before that switch.
 3. **Driver package.** `@kapula/driver`: a typed client for drivers (setup /
    create, the WebSocket with reconnect and the snapshot-authoritative
    rules), grown from `tests/e2e/test-driver.ts`. Nuppi and the e2e suite

@@ -10,7 +10,7 @@ host that runs them, and every test.
 | Package | What it is |
 | --- | --- |
 | `@kapula/protocol` | The wire protocol: zod schemas, constants and types. Drivers written in TypeScript import it; everyone else reads `docs/KAPULA.md`. |
-| `@kapula/server` | The server core: sessions, signaling, the driver/player/host JSON APIs — over a `GamepadStore` you implement (an in-memory store is included). `@kapula/server/testing` is the store conformance suite. |
+| `@kapula/server` | The server core: sessions, signaling, the driver/player/host JSON APIs — over a `KapulaStore` you implement (an in-memory store is included). `@kapula/server/testing` is the store conformance suite. |
 | `@kapula/phone` | The React screens a phone needs: join, lobby, controller, layout editor. Host-agnostic: tell it where the API is. |
 | `apps/host` | The reference host: the server over the memory store, the phone app, a minimal host page. Development, tests, and single-owner self-hosting. |
 
@@ -46,7 +46,7 @@ docker run -p 4310:4310 -e KAPULA_OWNER_TOKEN=change-me kapula
 
 The owner logs in with the token to create sessions; sessions live in
 memory and end with the process. For anything beyond one owner, implement
-`GamepadStore` and `GamepadAuth` over your own database and users (see
+`KapulaStore` and `KapulaAuth` over your own database and users (see
 `docs/KAPULA.md`, "Implementation map") and run the conformance suite
 against your store.
 

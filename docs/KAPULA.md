@@ -1,17 +1,19 @@
 # Kapula — design and protocol
 
 > Carried over from the monorepo's `backend/src/apps/gamepad/GAMEPAD.md` on
-> 2026-10-02, when the gamepad app became the Kapula packages. The text still
-> says "gamepad" for the app, the paths and the identifiers; renaming them is
-> a backlog item. Where it mentions monorepo-only parts (the tRPC router, the
-> Postgres adapter, `instance.ts`, the HostPanel/DebugDriver/HelpPage pages)
-> those stayed in the monorepo; the reference host in `apps/host` plays the
-> host's part here. Path map: `common/src/apps/gamepad.ts` →
-> `packages/protocol/src/index.ts`, `backend/src/apps/gamepad/*` →
-> `packages/server/src/*`, `frontend/src/apps/gamepad/player/*` →
-> `packages/phone/src/*`, the tests → `tests/unit` and `tests/e2e`.
+> 2026-10-02, when the gamepad app became the Kapula packages, and renamed
+> with them: "gamepad" below means a physical controller, everything that
+> meant the app says Kapula, and the wire is protocol version 2
+> (`/api/kapula`, `x-kapula-ratelimit-key`, `kpk_` keys). Where the text
+> mentions monorepo-only parts (the tRPC router, the Postgres adapter,
+> `instance.ts`, the HostPanel/DebugDriver/HelpPage pages) those stayed in
+> the monorepo; the reference host in `apps/host` plays the host's part
+> here. Path map: `common/src/apps/gamepad.ts` → `packages/protocol/src/index.ts`,
+> `backend/src/apps/gamepad/*` → `packages/server/src/*`,
+> `frontend/src/apps/gamepad/player/*` → `packages/phone/src/*`, the tests →
+> `tests/unit` and `tests/e2e`.
 
-# Gamepad
+# Kapula
 
 Phones become game controllers. An authenticated **host** creates a session in
 the web app; an external **driver** (a game or desktop client — e.g. the
@@ -28,7 +30,7 @@ shared by the backend, the frontend and the tests.
 | ------ | ------------------------------------- | --------- |
 | host   | gauth cookie (session owner)          | tRPC + WS `role=host&sessionId=…` |
 | driver | setup code (or a driver key) → driver token | HTTP setup/create + WS `role=driver&token=…` |
-| player | join code → player token (localStorage) | HTTP join (`POST /api/gamepad/join`) + WS `role=player&token=…` |
+| player | join code → player token (localStorage) | HTTP join (`POST /api/kapula/join`) + WS `role=player&token=…` |
 
 Codes are 6 chars from an unambiguous alphabet (no `0/O/1/I/L`). They are
 credentials: the **setup code** is single-use (consumed by the driver's setup
@@ -52,12 +54,12 @@ any active state ──driver end / host end / driver away 3 min / 24h idle─�
 - Driver disconnect during `in_progress` auto-pauses with reason
   `driver_disconnected`; a reconnected driver must send `resume` explicitly.
 - **Sessions are not kept alive for a missing driver.** A session without a
-  driver socket for `GAMEPAD_DRIVER_LOST_TIMEOUT_MS` (3 min — counted from
+  driver socket for `KAPULA_DRIVER_LOST_TIMEOUT_MS` (3 min — counted from
   setup if the driver never connects, or from the drop) is treated as
   permanently lost and ended with reason `driver_lost`. Players are sent
   straight back to the landing page (with a one-line reason; nothing of an
   ended session is ever shown as ongoing — the landing page verifies a stored
-  credential with `POST /api/gamepad/player/status` before showing "you are in a
+  credential with `POST /api/kapula/player/status` before showing "you are in a
   game"), and the host's session info disappears. The in-memory watchdog
   (`armDriverLostTimer` in runtime.ts) fires on time; the
   `gamepad_session_driver_disconnected_at` column plus the per-minute cleanup
@@ -71,11 +73,11 @@ any active state ──driver end / host end / driver away 3 min / 24h idle─�
   Driver keys section; lowercased, and people without an account yet can be
   listed — the check is against the logged-in user's auth email). A private
   session is invisible to the join-code path (`findPublicSessionByJoinCode`:
-  `GET /api/gamepad/join-info/:code` answers null and `POST /api/gamepad/join`
+  `GET /api/kapula/join-info/:code` answers null and `POST /api/kapula/join`
   is 404, so a code does not even confirm it exists); the users allowed
   in see it in "Your private sessions" on the landing page
-  (`gamepadListPrivateSessions`, named after the key) and join with one tap
-  (`gamepadJoinPrivateSession`, re-checking access). The setup response's
+  (`kapulaListPrivateSessions`, named after the key) and join with one tap
+  (`kapulaJoinPrivateSession`, re-checking access). The setup response's
   `joinUrl` is the landing page instead of a join link. Access is checked
   at join time only: unlinking an email (or revoking the key) keeps that
   person out from then on, but a player already in keeps playing until they
@@ -106,7 +108,7 @@ any active state ──driver end / host end / driver away 3 min / 24h idle─�
 - **Roster sessions** (`config.roster`, the lost-session recovery path): the
   driver predefines the players (name + color, e.g. the ones it remembers
   from the session that was lost). The join screen lists them and a player
-  picks the slot that is theirs (`POST /api/gamepad/join` with `name`; a taken
+  picks the slot that is theirs (`POST /api/kapula/join` with `name`; a taken
   slot is refused); name and color are locked in the lobby
   (`update_profile` → `profile_locked`); `minPlayers` = `maxPlayers` = roster
   size, so `start` is allowed only once every slot is filled, connected and
@@ -127,7 +129,7 @@ any active state ──driver end / host end / driver away 3 min / 24h idle─�
 
 ## Driver HTTP API
 
-`POST /api/gamepad/driver/setup` (no auth, rate limited 10/min/IP)
+`POST /api/kapula/driver/setup` (no auth, rate limited 10/min/IP)
 
 ```jsonc
 {
@@ -241,7 +243,7 @@ A driver may also post a background image for the phones over HTTP; see
 the request asked for it); the `snapshot` message repeats it, so a driver that
 reconnects without the setup response still knows.
 
-`metadata` is free-form text (max `GAMEPAD_METADATA_MAX_LENGTH` = 4096 chars)
+`metadata` is free-form text (max `KAPULA_METADATA_MAX_LENGTH` = 4096 chars)
 the host optionally attached when creating the session, delivered verbatim and
 uninterpreted — e.g. a launcher app passing game configuration to the game.
 Absent when the host set none, and delivered only in this response: a driver
@@ -255,10 +257,10 @@ a chore for a standalone driver (a PC virtual-gamepad client, a native game)
 that would otherwise reopen the website on every launch. A **driver key** is
 issued once to a user and turns the flow into "click start, show the QR code".
 
-`POST /api/gamepad/driver/create` (rate limited like `/driver/setup`)
+`POST /api/kapula/driver/create` (rate limited like `/driver/setup`)
 
 ```jsonc
-// Authorization: Bearer gpk_…
+// Authorization: Bearer kpk_…
 {
   "config": { ... },        // optional, same config as /driver/setup
   "protocolVersion": 1,     // optional, same rule as /driver/setup
@@ -281,27 +283,27 @@ key — and "End session" works).
   `host_ended` and close code 4005) — never the hosted one or another key's.
   A game restarting after a crash sends `replaceExisting: true`. The session
   records its key in `gamepad_session_driver_key_id` (migration 54; NULL for
-  hosted sessions). The web app's `gamepadCreateSession` still allows one
+  hosted sessions). The web app's `kapulaCreateSession` still allows one
   hosted session per user.
-- Host-side tRPC for multiple sessions: `gamepadListMySessions` lists every
+- Host-side tRPC for multiple sessions: `kapulaListMySessions` lists every
   active session the user owns (hosted first, each with `driverKeyId` /
-  `driverKeyName`); `gamepadGetMySession` is the hosted slot only;
-  `gamepadEndMySession({sessionId?})` and `gamepadKickPlayer({playerId,
+  `driverKeyName`); `kapulaGetMySession` is the hosted slot only;
+  `kapulaEndMySession({sessionId?})` and `kapulaKickPlayer({playerId,
   sessionId?})` target the given session when it is the caller's (else
   `NOT_FOUND`), or the hosted one without an id.
 - Keys live in `gamepad_driver_key` (migration 37) as **SHA-256 hashes** —
-  the plain `gpk_` + 32 random bytes value is returned exactly once, by
-  `gamepadCreateDriverKey`, and is unrecoverable after that. Lookup hashes the
+  the plain `kpk_` + 32 random bytes value is returned exactly once, by
+  `kapulaCreateDriverKey`, and is unrecoverable after that. Lookup hashes the
   presented key and matches on the unique index, so no secret is ever compared
   byte by byte. `last_used_at` is stamped on every successful create.
-- Self-service tRPC, all owner-scoped: `gamepadCreateDriverKey({name})`,
-  `gamepadListDriverKeys` (name, display prefix, created, last used — never
-  the key), `gamepadRevokeDriverKey({id})`. Revoking is immediate and
+- Self-service tRPC, all owner-scoped: `kapulaCreateDriverKey({name})`,
+  `kapulaListDriverKeys` (name, display prefix, created, last used — never
+  the key), `kapulaRevokeDriverKey({id})`. Revoking is immediate and
   permanent; a revoked key is `401` like an unknown one. The host panel has a
   "Driver keys" section for all three.
-- Linked emails (`gamepadCreateDriverKey({name, linkedEmails?})`,
-  `gamepadSetDriverKeyEmails({id, linkedEmails})`, listed by
-  `gamepadListDriverKeys`) say who besides the owner may join the key's
+- Linked emails (`kapulaCreateDriverKey({name, linkedEmails?})`,
+  `kapulaSetDriverKeyEmails({id, linkedEmails})`, listed by
+  `kapulaListDriverKeys`) say who besides the owner may join the key's
   private sessions — see "Private sessions" above. Max 20 per key.
 - A key is a credential for *creating sessions in its owner's name* (and for
   ending the one that key has running with `replaceExisting`). It is not a login
@@ -320,31 +322,33 @@ the driver API — `{ success: true, … }`, or `{ success: false, error }` with
 `packages/phone/src/player-api.ts`. The host page's own operations
 (creating a session, driver keys, kicking) stay on tRPC.
 
-- `GET /api/gamepad/join-info/:joinCode` → `{ success, info }`: everything
-  the join screen shows before joining (`gamepadJoinInfoSchema`: state,
+- `GET /api/kapula/join-info/:joinCode` → `{ success, info }`: everything
+  the join screen shows before joining (`kapulaJoinInfoSchema`: state,
   game, player count and cap, `acceptingPlayers`, free colors, schema names,
   the roster with `taken` flags). `info` is null for a code that leads
   nowhere — unknown, ended, or private. Never exposes tokens.
-- `POST /api/gamepad/join` with `{ joinCode, name? }` → `{ success,
-  sessionId, playerId, playerToken }` (`gamepadJoinRequestSchema`,
-  `gamepadJoinResultSchema`). The server assigns the name and color; in a
+- `POST /api/kapula/join` with `{ joinCode, name? }` → `{ success,
+  sessionId, playerId, playerToken }` (`kapulaJoinRequestSchema`,
+  `kapulaJoinResultSchema`). The server assigns the name and color; in a
   roster session `name` picks the slot. 404 for an unknown or private
   session, 409 with the reason when the session is full, not accepting
   players, or the slot is taken.
-- `POST /api/gamepad/player/status` with `{ token }` → `{ success, status }`:
+- `POST /api/kapula/player/status` with `{ token }` → `{ success, status }`:
   whether a stored credential still leads somewhere
-  (`gamepadPlayerStatusSchema`: session id and state, game, the player's
+  (`kapulaPlayerStatusSchema`: session id and state, game, the player's
   name and color), null when not. The token travels in the body, never in
   the URL.
 
-## Protocol version 1 — pre-release (unlocked 2026-10-02)
+## Protocol version 2 — pre-release
 
-Version 1 was frozen on 2026-09-13 and unlocked on 2026-10-02 for the Kapula
-extraction (the gamepad becoming its own npm packages; see "Implementation
-map"). Until the first stable Kapula release the shape may still change —
-paths, names, anything that was awkward to publish — and every known driver
-author is told before a breaking change lands. At that release version 1
-freezes again with exactly the rules below, this time for good.
+Version 1 was the gamepad app's wire, frozen on 2026-09-13 and unlocked on
+2026-10-02 for the extraction into the Kapula packages. Version 2 is the
+Kapula wire: the same messages under the renamed paths (`/api/kapula`), header
+(`x-kapula-ratelimit-key`) and key prefix (`kpk_`). A driver that asks for
+version 1 at setup is refused with `supported: [2]`; a driver that asks for
+nothing gets 2. Until the first stable Kapula release the shape may still
+change and every known driver author is told before a breaking change lands.
+At that release version 2 freezes, for good, with exactly the rules below.
 
 Within a version, the rules already apply:
 
@@ -358,22 +362,20 @@ Within a version, the rules already apply:
   unknown type fails the discriminated union and is dropped.
 - **Anything else is a new version**, negotiated at setup: a driver asks with
   `protocolVersion` and a server that does not serve it refuses with the list
-  it does serve. Both versions can then be served side by side. (During the
-  pre-release window a breaking change bumps the version once, to mark the
-  Kapula wire as distinct from the old one, instead of serving both.)
+  it does serve. Both versions can then be served side by side.
 
-`GAMEPAD_PROTOCOL_VERSION` in `packages/protocol/src/index.ts` is the number; the
-setup response and every `snapshot` carry it.
+`KAPULA_PROTOCOL_VERSION` in `packages/protocol/src/index.ts` is the number;
+the setup response and every `snapshot` carry it.
 
 ## WebSocket protocol
 
-Path `/api/gamepad/ws` (same host). All messages are JSON. Every role receives
+Path `/api/kapula/ws` (same host). All messages are JSON. Every role receives
 a full `snapshot` message on (re)connect — clients must treat it as the source
 of truth and apply later events on top. The snapshot carries
 `protocolVersion` alongside the session state, so the version is available on
 every connection, not only in the setup response. Message shapes: see
-`gamepadServerMessageSchema`, `gamepadPlayerClientMessageSchema` and
-`gamepadDriverClientMessageSchema` in `packages/protocol/src/index.ts`.
+`kapulaServerMessageSchema`, `kapulaPlayerClientMessageSchema` and
+`kapulaDriverClientMessageSchema` in `packages/protocol/src/index.ts`.
 
 - Player → server: `input` (see below), `motion` (see "Raw motion stream"),
   `text {controlId, text}` (see "Text input"), `set_ready`, `select_schema`,
@@ -389,7 +391,7 @@ every connection, not only in the setup response. Message shapes: see
   token dies, everyone gets `player_left`), and their socket closes with
   `4011`. Not a ban: nothing stops them joining again with the join code.
   `unknown_player` when they are already gone. The host can do the same from
-  the host panel through `gamepadKickPlayer` — they see the roster but have
+  the host panel through `kapulaKickPlayer` — they see the roster but have
   no driver socket.
 - `lobby` takes a running or paused session back to `waiting_for_players`
   between rounds: every player's `ready` is cleared in the same step (each
@@ -412,7 +414,7 @@ every connection, not only in the setup response. Message shapes: see
   a permanent exit, remove the player; distinct from `player_disconnected`,
   which is a reconnectable drop — and `driver_connected/…`),
   `error {code, message}`.
-- `error.code` is a closed enum (`gamepadErrorCodeSchema`): `invalid_state`
+- `error.code` is a closed enum (`kapulaErrorCodeSchema`): `invalid_state`
   (the action is not allowed in this state), `cannot_start` (not everyone is
   joined, connected and ready), `profile_taken` (name or color is another
   player's), `profile_locked` (roster session: names and colors are fixed),
@@ -476,14 +478,14 @@ driver-lost clock never starts.
 
 - **Server → clients:** a WebSocket ping every 30 s
   (`KEEPALIVE_INTERVAL_MS` in `signaling.ts`, overridable outside production
-  with `GAMEPAD_WS_KEEPALIVE_MS` — the e2e test needs it short). A client
+  with `KAPULA_WS_KEEPALIVE_MS` — the e2e test needs it short). A client
   that has not answered by the next tick is `terminate()`d, so a silent
   socket is gone within two ticks and its role is freed the usual way
   (`player_disconnected`, or the driver-away clock). Browsers, Node's
   built-in `WebSocket` and the `ws` package answer ping frames automatically;
   a driver on a library that does not must answer them itself.
 - **Phone → server:** an application-level `{"type":"ping"}` every 25 s
-  (`useGamepadSocket.ts`). Protocol-level ping frames are invisible to the
+  (`useKapulaSocket.ts`). Protocol-level ping frames are invisible to the
   reverse proxies in between, which drop sockets that have carried no data —
   a waiting lobby or a paused game otherwise flickers through a
   disconnect/reconnect. Drivers should do the same; the server answers with
@@ -543,7 +545,7 @@ value shapes plus one new one:
 | `a`, `b`, `x`, `y`, `lb`, `rb`, `back`, `start`, `ls`, `rs`, `home` | boolean | buttons 0–5, 8–11, 16 |
 | `lt`, `rt` | **number** in [0, 1] (analog pull) | buttons 6, 7 `.value` |
 
-The bare number is the only protocol addition (`gamepadInputValueSchema`
+The bare number is the only protocol addition (`kapulaInputValueSchema`
 accepts a scalar in [-1, 1]); a driver only meets it after opting in, so the
 protocol version is unchanged. Every id is present in every frame (missing
 hardware reads as released). The phone (`physical-gamepad-utils.ts`, pure and
@@ -572,9 +574,9 @@ smaller oversized frames silently, without closing).
 
 ### Background image
 
-`POST /api/gamepad/driver/background?fit=cover|contain|fill` with
+`POST /api/kapula/driver/background?fit=cover|contain|fill` with
 `Authorization: Bearer <driverToken>` and the image itself as the body
-(PNG, JPEG, GIF or WebP, at most `GAMEPAD_BACKGROUND_MAX_BYTES` = 2 MB)
+(PNG, JPEG, GIF or WebP, at most `KAPULA_BACKGROUND_MAX_BYTES` = 2 MB)
 puts it behind the controller on every phone. The type is sniffed from the
 magic bytes (`sniffImageType` in `logic.ts`), never taken from the claimed
 Content-Type — the bytes are served back under the sniffed type, so nothing
@@ -586,7 +588,7 @@ removes it. Errors: 401 (no/dead token — checked before the body is read),
 
 - One image per session (`gamepad_session_background`, migration 53, stored
   base64 in a TEXT column): a new upload replaces it. Every upload gets a
-  fresh random key and the URL is `/api/gamepad/background/{key}`, so a URL
+  fresh random key and the URL is `/api/kapula/background/{key}`, so a URL
   names one version of the image and is served `immutable`.
 - The GET is public — a phone loads it with a plain CSS `url()`, which
   carries no credentials — so the 64-hex-char key is the capability, the
@@ -657,7 +659,7 @@ them keeps working through every additive change.
 6. **The driver token is a password.** It travels in the WebSocket query
    string, so it lands in access logs and proxy logs; it is scoped to one
    session and dies with it. Never log it, never put it in a URL you show a
-   player. The same goes for a driver key (`gpk_…`), which is longer-lived.
+   player. The same goes for a driver key (`kpk_…`), which is longer-lived.
 
 ## Controller layout
 
@@ -793,7 +795,7 @@ entries for control ids the schema no longer has are ignored.
 Where it is stored depends on the driver: with `config.driverAppUuid` (a
 UUID the driver generates once and sends on every setup — the game's
 identity) edits live in localStorage under
-`gamepad:layout:{driverAppUuid}:{schemaId}:{mode}` and come back in every
+`kapula:layout:{driverAppUuid}:{schemaId}:{mode}` and come back in every
 later session of that game. Without it there is nothing safe to file them
 under (a schema id alone would make unrelated games share a layout), so edits
 are kept in memory while the session screen is mounted and the menu says so.
@@ -927,7 +929,7 @@ image).
   the oriented surface (pointer positions go through `pointerDeltaInFrame`
   like the sticks). Each finger's pointer is captured, so a finger dragged
   off the box keeps reporting, clamped to the edge, until it lifts.
-- `id` is the finger's slot, 0–9 (`GAMEPAD_RAW_MAX_TOUCHES`), stable from
+- `id` is the finger's slot, 0–9 (`KAPULA_RAW_MAX_TOUCHES`), stable from
   touch-down to lift-off; a new finger takes the lowest free slot, so ids
   are small and reused. An 11th finger is ignored until one lifts.
 - Touch-downs and lifts flush immediately (edges, like buttons); movement
@@ -947,7 +949,7 @@ image).
   when the driver's mapping depends on it.
 - The pure parts (slot allocation, clamped/rounded positions, the sorted
   wire value) are in `raw-touch-utils.ts`, unit-tested. The array is one
-  more member of `gamepadInputValueSchema`; a driver only meets it after
+  more member of `kapulaInputValueSchema`; a driver only meets it after
   declaring a `raw` control, so existing drivers are untouched.
 
 ### Text input
@@ -974,7 +976,7 @@ PC.
   merged-away frame would lose words), no seq, every message relayed in
   order. Like `motion` it is relayed only in `in_progress`, to the driver
   only, and shares the player's input rate window.
-- `maxLength` (1–1000, default 1000 = `GAMEPAD_TEXT_MAX_LENGTH`) caps the
+- `maxLength` (1–1000, default 1000 = `KAPULA_TEXT_MAX_LENGTH`) caps the
   field on the phone; the server drops longer messages.
 - Keys a phone keyboard lacks (Enter, Backspace, Esc, arrows, modifiers for a
   remote-controlled PC) are ordinary buttons in the schema, mapped by the
@@ -1040,7 +1042,7 @@ viewport into the game. `useViewportGuard.ts` removes both:
 back to the origin on mount, after every `focusout`, and on every
 window/visualViewport scroll or resize while no text field is focused (while
 the keyboard is up iOS scrolls on purpose); `useNoPinchZoom` (mounted by
-`GamepadApp`) swallows Safari's `gesturestart`/`gesturechange` and
+`KapulaApp`) swallows Safari's `gesturestart`/`gesturechange` and
 multi-touch `touchmove`, with `touch-action: pan-x pan-y` on `html` for the
 other browsers. Remote-inspect a misbehaving phone by checking
 `window.scrollY` and `visualViewport.offsetTop` / `.scale` while it happens.
@@ -1060,27 +1062,27 @@ box, so a control is never placed under a notch). The status bar is
   the monorepo's adapters, so it can be extracted into its own package (the
   Kapula plan) and embedded in a desktop app that has no database:
   - **Core** (no imports of the monorepo's `db`, `env`, `logger`, auth or
-    cron): `store.ts` (the `GamepadStore` persistence contract and the
+    cron): `store.ts` (the `KapulaStore` persistence contract and the
     server's own session/player/key records — start here for the data
-    model), `context.ts` (`GamepadContext`: store + host auth + logger +
-    `GamepadServerConfig` with its defaults), `logic.ts` (pure rules),
+    model), `context.ts` (`KapulaContext`: store + host auth + logger +
+    `KapulaServerConfig` with its defaults), `logic.ts` (pure rules),
     `runtime.ts` (`createSessionRuntimes`: in-memory connections per
     session, single-process; snapshots; the driver-lost watchdog),
     `signaling.ts` (`createSignaling`: the WS roles), `player-api.ts`
     (`createPlayerRouter`: the phone's three JSON routes, see "Player HTTP
     API"), `memory-store.ts`
-    (`createMemoryGamepadStore`: the contract in process memory with an
+    (`createKapulaMemoryStore`: the contract in process memory with an
     injectable clock — for an embedded host and for tests), `driver-api.ts`
     (`createDriverRouter`: the driver HTTP API, `/driver/setup`,
-    `/driver/create`, backgrounds), `service.ts` (`createGamepadService`:
+    `/driver/create`, backgrounds), `service.ts` (`createKapulaService`:
     what the host page and the phone do over HTTP, framework-free, failing
-    with `GamepadServiceError`), `gamepad-server.ts`
-    (`createGamepadServer(deps)`: wires the above and exposes
+    with `KapulaServiceError`), `server.ts` (the monorepo: `gamepad-server.ts`)
+    (`createKapulaServer(deps)`: wires the above and exposes
     `httpRouter` — driver + player routes —, `attachWebSocket`, `service`,
     `runCleanup`).
   - **Monorepo adapters:** `operations.ts` (piquel SQL) behind
     `postgres-store.ts` (maps rows to records, Postgres unique violations to
-    `GamepadStoreConflictError`), `instance.ts` (the one `gamepad` server
+    `KapulaStoreConflictError`), `instance.ts` (the one `gamepad` server
     instance: Postgres store, `gauth` cookie as host auth, env-derived
     config — mounted in `server.ts`, attached in `index.ts`), `gamepad.ts`
     (the host page's tRPC: thin wrappers over `service`), `cleanup.ts` (per-minute cron
@@ -1091,10 +1093,10 @@ box, so a control is never placed under a notch). The status bar is
   column 32 added: host auto-join is gone), `37-gamepad-driver-keys.sql`
   (self-service driver keys), `53-gamepad-background.sql` (driver background
   images; the upload, delete and public GET live in `driver-api.ts`). Env:
-  `GAMEPAD_DRIVER_LOST_TIMEOUT_MS`
+  `KAPULA_DRIVER_LOST_TIMEOUT_MS`
   shortens the watchdog outside production (the e2e suite needs it).
 - `frontend/src/apps/gamepad/` — the **host page** (monorepo-only):
-  `GamepadApp` (wouter routes on the app's
+  `KapulaApp` (wouter routes on the app's
   base path: `/` landing — always reachable, even mid-session — plus
   `/play`, `/join/:code`, `/debug`, `/help`; it mounts the
   `KapulaPlayerProvider` with the API base the backend serves on),
@@ -1103,14 +1105,14 @@ box, so a control is never placed under a notch). The status bar is
 - `packages/phone/src/` — the **player screens**, host-agnostic
   (the future Kapula phone package). They import nothing from the monorepo
   and know no server path: `config.tsx` holds `KapulaPlayerConfig`
-  (`apiBase`, default `/api/gamepad`), the provider/hook and
-  `buildGamepadWsUrl`; `player-api.ts` is the JSON client for that base
+  (`apiBase`, default `/api/kapula`), the provider/hook and
+  `buildKapulaWsUrl`; `player-api.ts` is the JSON client for that base
   (`createPlayerApi` / `usePlayerApi`); `ui.tsx` the few primitives
   (Button, Card, Badge, LoadingState) styled with the `kp-*` Tailwind
   tokens, which `tailwind-preset.js` defines over the CSS variables in
   `kapula.css` (RGB triplets so opacity modifiers work; defaults = the
   monorepo palette, a host re-themes by redefining the variables).
-  `tests/unit/gamepad-player-boundary.spec.ts` enforces all of this. Inside:
+  `tests/unit/player-boundary.spec.ts` enforces all of this. Inside:
   `JoinScreen`,
   `PlayerSession` (lobby/controller/paused; mounts the scroll guard from
   `useViewportGuard.ts` and pads with `safe-area.ts`), `Controller` +
@@ -1132,7 +1134,7 @@ box, so a control is never placed under a notch). The status bar is
   rules, and pointer mapping through its rotation), `motion-utils.ts` +
   `useMotionStream.ts` (raw IMU stream: sign normalization, batching),
   `RawTouchSurface.tsx` + `raw-touch-utils.ts` (the `raw` control: finger
-  slots and box positions), `useGamepadSocket.ts` (the reconnecting session
+  slots and box positions), `useKapulaSocket.ts` (the reconnecting session
   socket, also used by the host page), `snapshot-utils.ts` /
   `session-messages.ts` / `debug-utils.ts` (pure helpers shared with the host
   page).
@@ -1146,47 +1148,47 @@ box, so a control is never placed under a notch). The status bar is
   568×320 minimum and CSS-scaled down on narrow screens).
 - Tests — three npm scripts: `npm run test:unit` (unit only),
   `npm run test:e2e` (e2e only) and `npm run test` (both, unit first).
-  `tests/unit/gamepad-*.spec.ts` are pure specs (logic, wire-contract
+  `tests/unit/*.spec.ts` are pure specs (logic, wire-contract
   schemas, layout geometry, layout-override box math, gyro tilt math,
   physical-gamepad mapping, frontend snapshot folding; no browser or
   servers). The **store conformance suite**
   (`packages/server/src/testing/store-conformance.ts`) is one spec of the
-  `GamepadStore` contract run against every implementation: the unit project
-  runs it on the memory store (`gamepad-memory-store.spec.ts`, with a fake
+  `KapulaStore` contract run against every implementation: the unit project
+  runs it on the memory store (`memory-store.spec.ts`, with a fake
   clock), the e2e project on the Postgres adapter
-  (`gamepad-postgres-store.spec.ts`, reading `DATABASE_URL` from the
+  (`the monorepo's gamepad-postgres-store.spec.ts`, reading `DATABASE_URL` from the
   environment or `backend/.env`; it creates two throwaway users and skips the
   tests that sweep every live session, since the dev database is shared).
   A store rule changes in three places: the contract's doc comment, the
   suite, and each store. The e2e suites need the DB up and reuse running dev servers or
   start their own (`PW_FRONTEND_URL` points a run at an alternative stack,
   e.g. a freshly booted backend on a spare port, since the backend serves
-  `/api` itself): `tests/e2e/gamepad.spec.ts` (full flow through the real frontend
-  with a scripted driver) and `tests/e2e/gamepad-ws.spec.ts` (protocol-level:
+  `/api` itself): `tests/e2e/browser.spec.ts` (full flow through the real frontend
+  with a scripted driver) and `tests/e2e/ws.spec.ts` (protocol-level:
   raw WebSockets for all three roles — close codes, snapshots, 4010
   takeover, state gates, input relay + rate limits, driver-loss auto-pause,
   malformed/oversized frames, driver-setup rate limiting, roster sessions;
-  every server frame is validated against `gamepadServerMessageSchema`,
+  every server frame is validated against `kapulaServerMessageSchema`,
   and the setup-code path is exercised for both the default and an explicit
   `protocolVersion`). e2e runs with one worker: the spec files share one dev
   stack and the one-hosted-session-per-user rule. The driver-setup rate limit is
   keyed per caller outside production — the dev-only
-  `x-gamepad-ratelimit-key` header, which the helpers (`driverSetup`,
+  `x-kapula-ratelimit-key` header, which the helpers (`driverSetup`,
   `TestDriver.setup`) fill with a fresh bucket per call — so the black-box
   429 test fills one fixed bucket of its own and always runs, draining
   nothing. The limiter's window logic is separately unit-tested with a fake
   clock (`createRateLimiter` in `logic.ts`). The driver-lost watchdog test
   runs only when
   the backend under test was booted with a short
-  `GAMEPAD_DRIVER_LOST_TIMEOUT_MS` and the same value is in the test
+  `KAPULA_DRIVER_LOST_TIMEOUT_MS` and the same value is in the test
   process's environment (it is skipped otherwise).
 
 ## Admin debug driver (`/gamepad/debug`)
 
 A stand-in for an external driver, for developing without a real game
-running. Visible only to admins (`user.isAdmin`, checked in `GamepadApp`); it
+running. Visible only to admins (`user.isAdmin`, checked in `KapulaApp`); it
 deliberately uses the exact same public driver surface a real game uses
-(`POST /api/gamepad/driver/setup` + the driver WebSocket role), so there is
+(`POST /api/kapula/driver/setup` + the driver WebSocket role), so there is
 no debug-only backend code and using it exercises the production paths.
 
 What it does:
