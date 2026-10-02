@@ -102,10 +102,16 @@ export function useGamepadSocket(
       };
     };
 
-    connect();
+    // Deferred by a tick: React's development StrictMode runs this effect,
+    // its cleanup and the effect again synchronously, and a socket opened in
+    // the first run would reach the server (which registers it, then sees it
+    // close: a player_disconnected for a player who never left). The
+    // cleanup of that first run clears the timer before it fires.
+    const startTimer = window.setTimeout(connect, 0);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(startTimer);
       stopPings();
       if (reconnectTimerRef.current !== null) {
         window.clearTimeout(reconnectTimerRef.current);

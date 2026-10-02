@@ -295,6 +295,10 @@ export const createSignaling = (
       return;
     }
 
+    // Gone during the lookup (a phone that reconnected at once): registering
+    // a dead socket would announce a disconnect for a player who is here.
+    if (ws.readyState !== WebSocket.OPEN) return;
+
     const runtime = runtimes.getRuntime(session);
     const playerId = player.id;
     const config = parseSessionConfig(session);
