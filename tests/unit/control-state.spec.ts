@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { toggleNext, stickReleaseValue } from "@kapula/phone/utils";
+import { toggleNext, stickReleaseValue, stickAnchor } from "@kapula/phone/utils";
 import { kapulaControlSchema } from "@kapula/protocol";
 
 test.describe("control state helpers", () => {
@@ -23,6 +23,22 @@ test.describe("control state helpers", () => {
   test("release centers when spring is true or unset", () => {
     expect(stickReleaseValue(true, { x: 0.4, y: -0.7 })).toEqual({ x: 0, y: 0 });
     expect(stickReleaseValue(undefined, { x: 1, y: 1 })).toEqual({ x: 0, y: 0 });
+  });
+
+  test("spring stick anchors at center: edge touch is full deflection", () => {
+    const landing = { x: 40, y: 0 };
+    const a = stickAnchor(true, landing, { x: 0, y: 0 });
+    expect(a).toEqual({ x: 0, y: 0 });
+    expect(stickAnchor(undefined, landing, { x: 0, y: 0 })).toEqual({ x: 0, y: 0 });
+    // value on touch-down = delta - anchor, non-zero
+    expect(landing.x - a.x).toBe(40);
+  });
+
+  test("non-spring stick continues from the held offset without a jump", () => {
+    const landing = { x: -30, y: 10 };
+    const held = { x: 20, y: -5 };
+    const a = stickAnchor(false, landing, held);
+    expect({ x: landing.x - a.x, y: landing.y - a.y }).toEqual(held);
   });
 
   test("schema accepts spring and toggle mode", () => {

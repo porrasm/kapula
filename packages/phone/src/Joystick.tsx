@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { relativeStickTravel, relativeStickValue } from "./layout-utils.js";
 import { pointerDeltaInFrame } from "./pointer-utils.js";
-import { stickReleaseValue } from "./control-state.js";
+import { stickAnchor, stickReleaseValue } from "./control-state.js";
 import { useContentFrame } from "./OrientedSurface.js";
 
 type JoystickProps = {
@@ -124,10 +124,11 @@ export const Joystick = ({
       };
       setOrigin(originRef.current);
     } else {
-      anchorRef.current = {
-        x: padDeltaX(clientX, clientY) - offsetRef.current.x,
-        y: padDeltaY(clientX, clientY) - offsetRef.current.y,
-      };
+      anchorRef.current = stickAnchor(
+        spring,
+        { x: padDeltaX(clientX, clientY), y: padDeltaY(clientX, clientY) },
+        offsetRef.current,
+      );
     }
     updateFromPointer(clientX, clientY);
   };

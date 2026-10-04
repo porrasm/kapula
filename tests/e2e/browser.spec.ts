@@ -138,6 +138,21 @@ test("full session flow: setup, lobby, input relay, pause, end", async ({
   });
   await alice.mouse.up();
 
+  // Regression: a default (spring) full stick measures from the pad center, so
+  // a touch-down near the edge reports a large deflection immediately.
+  const seqBefore = driver.messages.length;
+  await alice.mouse.move(box.x + box.width * 0.9, box.y + box.height / 2);
+  await alice.mouse.down();
+  await driver.waitFor(
+    (m) => {
+      if (m.type !== "input") return false;
+      if (driver.messages.indexOf(m) < seqBefore) return false;
+      const drive = (m.controls as Record<string, { x?: number }>).drive;
+      return typeof drive === "object" && (drive?.x ?? 0) > 0.6;
+    },
+  );
+  await alice.mouse.up();
+
   driver.send({ type: "pause" });
   await expect(alice.getByText("Paused")).toBeVisible();
   driver.send({ type: "resume" });
