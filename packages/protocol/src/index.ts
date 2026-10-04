@@ -454,6 +454,12 @@ export const controlSchemaSchema = z
     id: idSchema,
     name: z.string().min(1).max(32),
     orientation: kapulaOrientationSchema.default("auto"),
+    /**
+     * Input frame rate hint: `"standard"` (~30 fps, default) or `"fast"`
+     * (~60 fps, for faders or knobs riding a CC). Schemas with a `raw` or
+     * `touchpad` control are always fast.
+     */
+    rate: z.enum(["standard", "fast"]).optional(),
     controls: z.array(kapulaControlSchema).min(1).max(KAPULA_MAX_CONTROLS),
   })
   .superRefine((schema, ctx) => {

@@ -448,7 +448,9 @@ shape follows its `mode` (see "Joystick modes" below): `"full"` and
 `{y}`), and `"dpad"` sends one of 9 short direction codes — `"c"` (centered)
 or `"u"`/`"ur"`/`"r"`/`"dr"`/`"d"`/`"dl"`/`"l"`/`"ul"` (kept to 1–2 chars
 because they ride in every full-state frame; `dpadToVector` in common maps
-them to unit vectors). Movement is throttled to ~30 fps; button
+them to unit vectors). Movement is throttled to ~30 fps (~60 fps when the
+schema sets `rate: "fast"` or has a `raw`/`touchpad` control; `rate` is
+`"standard"` by default, and the server's 120 frames/s cap is unchanged); button
 presses/releases flush immediately as their own frames. Every analog value is
 rounded to **3 decimals** on the phone (`roundAxis` in `axis-utils.ts`, shared
 by touch sticks, tilt and real gamepads): finer than a thumb can aim, and

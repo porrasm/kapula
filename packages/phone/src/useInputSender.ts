@@ -1,16 +1,9 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { KapulaInputValue, KapulaPlayerClientMessage } from "@kapula/protocol";
+import { THROTTLE_MS } from "./input-throttle.js";
 import { createSeqCounter, type SeqCounter } from "./seq-counter.js";
 
-/** Joystick movement is coalesced to ~30 frames/s; button edges flush now. */
-export const THROTTLE_MS = 33;
-
-/**
- * Schemas with a pointer surface (`raw`, `touchpad`) coalesce at ~60
- * frames/s instead: a cursor driven at 30 fps visibly stutters, and the
- * server's 120 frames/s cap leaves room.
- */
-export const POINTER_THROTTLE_MS = 16;
+export { THROTTLE_MS, POINTER_THROTTLE_MS, inputThrottleMs } from "./input-throttle.js";
 
 /**
  * Maintains the full controller state and sends it as sequenced snapshot

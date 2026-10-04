@@ -15,8 +15,7 @@ import { TextEntry } from "./TextEntry.js";
 import { requestGyroAccess, useGyroInput, type GyroAccess } from "./useGyro.js";
 import type { SeqCounter } from "./seq-counter.js";
 import {
-  POINTER_THROTTLE_MS,
-  THROTTLE_MS,
+  inputThrottleMs,
   useInputSender,
 } from "./useInputSender.js";
 import { useMotionStream } from "./useMotionStream.js";
@@ -56,14 +55,11 @@ export const Controller = ({
   seq,
   background,
 }: ControllerProps) => {
-  const hasPointerSurface = schema.controls.some(
-    (c) => c.type === "raw" || c.type === "touchpad",
-  );
   const { setControl } = useInputSender(
     send,
     !disabled,
     seq,
-    hasPointerSurface ? POINTER_THROTTLE_MS : THROTTLE_MS,
+    inputThrottleMs(schema),
   );
   useWakeLock(keepAwake && !disabled);
   const containerRef = useRef<HTMLDivElement | null>(null);

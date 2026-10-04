@@ -904,3 +904,13 @@ test.describe("exact control geometry", () => {
     }
   });
 });
+
+test.describe("schema rate", () => {
+  const base = { id: "s", name: "S", controls: [{ type: "button", id: "a", label: "A" }] };
+  test("accepts fast and standard, absent by default, rejects turbo", () => {
+    expect(controlSchemaSchema.parse({ ...base, rate: "fast" }).rate).toBe("fast");
+    expect(controlSchemaSchema.parse({ ...base, rate: "standard" }).rate).toBe("standard");
+    expect(controlSchemaSchema.parse(base).rate).toBeUndefined();
+    expect(controlSchemaSchema.safeParse({ ...base, rate: "turbo" }).success).toBe(false);
+  });
+});
