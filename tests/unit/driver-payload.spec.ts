@@ -1,10 +1,13 @@
 import { test, expect } from "@playwright/test";
+import type { ControlSchema } from "@kapula/protocol";
 import {
   DRIVER_LABEL_MAX_LENGTH,
   DRIVER_TEXT_MAX_LENGTH,
   NO_OVERRIDES,
   applyDriverOverrides,
+  createInputState,
   createSeqCounter,
+  seedValueFor,
   DRIVER_VIBRATE_MAX_MS,
   parseDriverPayload,
 } from "@kapula/phone/utils";
@@ -171,20 +174,42 @@ test.describe("applyDriverOverrides", () => {
     expect(cleared.labels).toEqual({});
   });
 
-  test("set sends no frame and does not advance the input seq", () => {
-    // Applying overrides is pure display state: nothing here has a sender,
-    // and the session's seq counter is untouched, so the next real frame
-    // continues the numbering.
+  test("a pushed set seeds the sender silently and rides the next frame", () => {
     const seq = createSeqCounter(100);
-    expect(seq.next()).toBe(101);
-    const sent: unknown[] = [];
-    applyDriverOverrides(
-      NO_OVERRIDES,
-      parseDriverPayload({ set: { vol: 0.9, mute: true } }),
-      schema,
-      1,
-    );
-    expect(sent).toHaveLength(0);
+    const sent: any[] = [];
+    const state = createInputState(() => seq, (m) => sent.push(m));
+    state.set("vol", 0.2);
+    state.frame();
+    expect(sent).toHaveLength(1);
+    expect(sent[0].seq).toBe(101);
+
+    const parsed = parseDriverPayload({ set: { vol: 0.9, mute: true, move: { x: 2 } } });
+    const overrides = applyDriverOverrides(NO_OVERRIDES, parsed, schema, 1);
+    for (const control of (schema as ControlSchema).controls) {
+      const pushed = overrides.values[control.id];
+      const value = pushed && seedValueFor(control, pushed.value);
+      if (value !== undefined) state.seed(control.id, value);
+    }
+    // No frame, and the counter has not moved.
+    expect(sent).toHaveLength(1);
     expect(seq.next()).toBe(102);
+
+    // The player touches another control: the frame carries the pushed values.
+    state.set("pitch", 0.1);
+    state.frame();
+    expect(sent).toHaveLength(2);
+    expect(sent[1].seq).toBe(103);
+    expect(sent[1].controls.vol).toBe(0.9);
+    expect(sent[1].controls.mute).toBe(true);
+    expect(sent[1].controls.move).toEqual({ x: 1, y: 0 });
+    expect(sent[1].controls.pitch).toBe(0.1);
+  });
+
+  test("seedValueFor shapes single-axis sticks and rejects misfits", () => {
+    const move = (schema as ControlSchema).controls.find((c) => c.id === "move")!;
+    const vol = (schema as ControlSchema).controls.find((c) => c.id === "vol")!;
+    expect(seedValueFor(vol, true)).toBeUndefined();
+    expect(seedValueFor(vol, 0.12345)).toBe(0.123);
+    expect(seedValueFor(move, { x: 3, y: 3 })).toEqual({ x: 0.707, y: 0.707 });
   });
 });

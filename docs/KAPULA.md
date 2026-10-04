@@ -703,7 +703,9 @@ payload a good carrier for a game's own state.
   becomes the control's current one, so the next touch continues from it: the
   fader cap moves, the knob arc moves, the toggle is lit. Unknown ids and
   values that do not fit the control are ignored per entry; `relative` sticks,
-  dpads and momentary buttons ignore `set`.
+  dpads and momentary buttons ignore `set`. Input frames are full snapshots, so
+  the pushed value is also written into the phone's input state: the next frame
+  (sent for any other control) reports it instead of the old value.
   `{ "set": { "volume": 0.5, "mute": true, "aim": { "x": 0.3, "y": -0.2 } } }`
 - `{ "labels": { "<controlId>": "text" } }` — replace a control's label
   (buttons, faders, knobs, sticks, text, touchpads), max 16 characters,

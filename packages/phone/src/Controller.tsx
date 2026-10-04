@@ -6,7 +6,7 @@ import {
   type KapulaBackground,
   type KapulaPlayerClientMessage,
 } from "@kapula/protocol";
-import type { ControlOverrides } from "./driver-payload.js";
+import { seedValueFor, type ControlOverrides } from "./driver-payload.js";
 import { ControlWidget } from "./ControlWidget.js";
 import { applyLayoutOverride, type LayoutOverride } from "./layout-override.js";
 import { resolveLayout, type Viewport } from "./layout-utils.js";
@@ -59,13 +59,27 @@ export const Controller = ({
   background,
   overrides,
 }: ControllerProps) => {
-  const { setControl } = useInputSender(
+  const { setControl, seedControl } = useInputSender(
     send,
     !disabled,
     seq,
     inputThrottleMs(schema),
   );
   useWakeLock(keepAwake && !disabled);
+  // Pushed values join the sender's state silently, so the next frame
+  // (caused by any other control) reports them rather than the old ones.
+  const seededRevRef = useRef<Record<string, number>>({});
+  useEffect(() => {
+    if (!overrides) return;
+    for (const control of schema.controls) {
+      const pushed = overrides.values[control.id];
+      // Only fresh pushes: an older one must not undo what the player did since.
+      if (!pushed || seededRevRef.current[control.id] === pushed.rev) continue;
+      seededRevRef.current[control.id] = pushed.rev;
+      const value = seedValueFor(control, pushed.value);
+      if (value !== undefined) seedControl(control.id, value);
+    }
+  }, [overrides?.values, schema, seedControl]);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [viewport, setViewport] = useState<Viewport | null>(null);
   const frame = useContentFrame();

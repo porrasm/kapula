@@ -1,4 +1,5 @@
-import type { ControlSchema } from "@kapula/protocol";
+import type { ControlSchema, KapulaInputValue } from "@kapula/protocol";
+import { roundAxis } from "./axis-utils.js";
 
 /**
  * Conventions for the driver → player `message` relay. The server never looks
@@ -165,4 +166,39 @@ export const applyDriverOverrides = (
   return values === prev.values && labels === prev.labels
     ? prev
     : { values, labels };
+};
+
+/**
+ * The value a pushed `set` entry stands for in the input frame, in the same
+ * shape the widget itself reports (roundAxis'd; sticks clamped to the unit
+ * disc, single-axis sticks carrying only their axis). Undefined when the
+ * value does not fit the control.
+ */
+export const seedValueFor = (
+  control: ControlSchema["controls"][number],
+  value: DriverSetValue,
+): KapulaInputValue | undefined => {
+  if (!setValueFits(control, value)) return undefined;
+  if (control.type === "button") return value as boolean;
+  if (control.type === "fader" || control.type === "knob") {
+    return roundAxis(value as number);
+  }
+  if (control.type !== "joystick") return undefined;
+  const clamp = (v: number) => Math.max(-1, Math.min(1, v));
+  const pushed: { x?: number; y?: number } =
+    typeof value === "number"
+      ? control.mode === "y"
+        ? { y: value }
+        : { x: value }
+      : (value as { x?: number; y?: number });
+  let x = clamp(pushed.x ?? 0);
+  let y = clamp(pushed.y ?? 0);
+  if (control.mode === "x") return { x: roundAxis(x) };
+  if (control.mode === "y") return { y: roundAxis(y) };
+  const d = Math.hypot(x, y);
+  if (d > 1) {
+    x /= d;
+    y /= d;
+  }
+  return { x: roundAxis(x), y: roundAxis(y) };
 };

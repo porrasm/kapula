@@ -23,6 +23,7 @@ export * from "./pointer-utils.js";
 export * from "./raw-touch-utils.js";
 export * from "./safe-area.js";
 export * from "./seq-counter.js";
+export * from "./input-state.js";
 export * from "./session-messages.js";
 export * from "./snapshot-utils.js";
 export { isTextEntry } from "./useViewportGuard.js";

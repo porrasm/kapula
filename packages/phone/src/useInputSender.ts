@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { KapulaInputValue, KapulaPlayerClientMessage } from "@kapula/protocol";
 import { THROTTLE_MS } from "./input-throttle.js";
+import { createInputState } from "./input-state.js";
 import { createSeqCounter, type SeqCounter } from "./seq-counter.js";
 
 export { THROTTLE_MS, POINTER_THROTTLE_MS, inputThrottleMs } from "./input-throttle.js";
@@ -21,14 +22,18 @@ export const useInputSender = (
   seq?: SeqCounter,
   throttleMs = THROTTLE_MS,
 ) => {
-  const controlsRef = useRef<Record<string, KapulaInputValue>>({});
   const ownSeqRef = useRef<SeqCounter | null>(null);
   const counter = seq ?? (ownSeqRef.current ??= createSeqCounter());
   const seqRef = useRef(counter);
   seqRef.current = counter;
+  const sendRef = useRef(send);
+  const stateRef = useRef<ReturnType<typeof createInputState> | null>(null);
+  stateRef.current ??= createInputState(
+    () => seqRef.current,
+    (msg) => sendRef.current(msg),
+  );
   const timerRef = useRef<number | null>(null);
   const lastSentRef = useRef(0);
-  const sendRef = useRef(send);
   const enabledRef = useRef(enabled);
   const throttleRef = useRef(throttleMs);
   sendRef.current = send;
@@ -42,16 +47,12 @@ export const useInputSender = (
     }
     if (!enabledRef.current) return;
     lastSentRef.current = Date.now();
-    sendRef.current({
-      type: "input",
-      seq: seqRef.current.next(),
-      controls: { ...controlsRef.current },
-    });
+    stateRef.current!.frame();
   }, []);
 
   const setControl = useCallback(
     (id: string, value: KapulaInputValue, immediate: boolean) => {
-      controlsRef.current[id] = value;
+      stateRef.current!.set(id, value);
       if (immediate) {
         flush();
         return;
@@ -73,5 +74,10 @@ export const useInputSender = (
     [],
   );
 
-  return { setControl };
+  /** Records a driver-pushed value in the state: no frame, no seq. */
+  const seedControl = useCallback((id: string, value: KapulaInputValue) => {
+    stateRef.current!.seed(id, value);
+  }, []);
+
+  return { setControl, seedControl };
 };
