@@ -15,6 +15,8 @@ type FaderProps = {
   spring: boolean;
   defaultValue: number;
   label?: string;
+  /** A driver-pushed value: shown and held, never reported. */
+  external?: { value: number; rev: number };
   testId?: string;
   disabled: boolean;
   /** Value in [0, 1]; `released` flushes immediately. Also called once on
@@ -29,6 +31,7 @@ export const Fader = ({
   spring,
   defaultValue,
   label,
+  external,
   testId,
   disabled,
   onChange,
@@ -50,6 +53,14 @@ export const Fader = ({
   useEffect(() => {
     onChangeRef.current(defaultValue, false);
   }, [defaultValue]);
+
+  // The driver already knows this value, so nothing is sent for it.
+  useEffect(() => {
+    if (!external) return;
+    const next = Math.min(1, Math.max(0, external.value));
+    valueRef.current = next;
+    setValue(next);
+  }, [external?.rev]);
 
   const vertical = axis === "v";
   const length = vertical ? height : width;

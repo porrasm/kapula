@@ -695,6 +695,23 @@ payload a good carrier for a game's own state.
   up for the rest of the match. It renders above the controller and never
   moves a control.
 
+- `{ "set": { "<controlId>": value } }` — set a control's displayed state
+  **without emitting input** (the driver already knows the value, so no frame
+  is sent and the input `seq` does not move). A number for faders, knobs
+  (absolute: 0..1; endless: turns) and single-axis sticks (`x`/`y` modes), an
+  `{x, y}` object for `full` sticks, a boolean for `toggle` buttons. The value
+  becomes the control's current one, so the next touch continues from it: the
+  fader cap moves, the knob arc moves, the toggle is lit. Unknown ids and
+  values that do not fit the control are ignored per entry; `relative` sticks,
+  dpads and momentary buttons ignore `set`.
+  `{ "set": { "volume": 0.5, "mute": true, "aim": { "x": 0.3, "y": -0.2 } } }`
+- `{ "labels": { "<controlId>": "text" } }` — replace a control's label
+  (buttons, faders, knobs, sticks, text, touchpads), max 16 characters,
+  truncated. An empty string restores the schema's label.
+  `{ "labels": { "fire": "Reload", "mute": "" } }`
+
+Both `set` and `labels` are cleared when the player's schema changes.
+
 Both are additive conventions under version 1: a driver that sends neither is
 unaffected, and a phone that predates them ignores the keys.
 

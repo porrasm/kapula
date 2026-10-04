@@ -10,7 +10,13 @@ import {
 } from "@kapula/protocol";
 import { Button, LoadingState } from "./ui.js";
 import { Controller } from "./Controller.js";
-import { DRIVER_TEXT_MS, parseDriverPayload } from "./driver-payload.js";
+import {
+  DRIVER_TEXT_MS,
+  NO_OVERRIDES,
+  applyDriverOverrides,
+  parseDriverPayload,
+  type ControlOverrides,
+} from "./driver-payload.js";
 import { LayoutEditor } from "./LayoutEditor.js";
 import { layoutModeForOrientation } from "./layout-override.js";
 import { canCustomizeLayout } from "./layout-utils.js";
@@ -95,6 +101,15 @@ export const PlayerSession = ({ player, onLeave }: PlayerSessionProps) => {
   // bridging a real controller, so a buzz reaches the right hardware.
   const physicalRef = useRef(false);
 
+  // The driver's { set } / { labels } pushes. Keyed to the schema they were
+  // applied against: a switch (or a new schema under the same id) starts clean.
+  const [overridesState, setOverridesState] = useState<{
+    schemaId: string;
+    overrides: ControlOverrides;
+  } | null>(null);
+  const schemaRef = useRef<ControlSchema | null>(null);
+  const overrideRevRef = useRef(0);
+
   const onMessage = useCallback((msg: KapulaServerMessage) => {
     setSnapshot((prev) => applyServerMessage(prev, msg));
     if (msg.type === "state_changed") {
@@ -113,7 +128,7 @@ export const PlayerSession = ({ player, onLeave }: PlayerSessionProps) => {
     } else if (msg.type === "message") {
       // Driver → player conventions (driver-payload.ts); anything else in the
       // payload is delivered and ignored, as the relay promises.
-      const { vibrateMs, text } = parseDriverPayload(msg.payload);
+      const { vibrateMs, text, set, labels } = parseDriverPayload(msg.payload);
       if (vibrateMs !== null) {
         if ("vibrate" in navigator) navigator.vibrate(vibrateMs);
         // A phone being used as a bridge is lying on the table; the buzz
@@ -121,6 +136,19 @@ export const PlayerSession = ({ player, onLeave }: PlayerSessionProps) => {
         if (physicalRef.current) rumblePhysicalGamepad(vibrateMs);
       }
       if (text !== undefined) showDriverText(text);
+      const schema = schemaRef.current;
+      if (schema) {
+        const parsed = { set, labels };
+        const rev = (overrideRevRef.current += 1);
+        setOverridesState((prev) => {
+          const base =
+            prev?.schemaId === schema.id ? prev.overrides : NO_OVERRIDES;
+          const next = applyDriverOverrides(base, parsed, schema, rev);
+          return next === base && prev?.schemaId === schema.id
+            ? prev
+            : { schemaId: schema.id, overrides: next };
+        });
+      }
     }
   }, []);
 
@@ -207,6 +235,7 @@ export const PlayerSession = ({ player, onLeave }: PlayerSessionProps) => {
   const schema =
     snapshot.config.schemas.find((s) => s.id === me?.schemaId) ??
     snapshot.config.schemas[0];
+  schemaRef.current = schema;
   physicalRef.current = me?.schemaId === PHYSICAL_GAMEPAD_SCHEMA_ID;
 
   if (snapshot.state === "waiting_for_players") {
@@ -273,6 +302,11 @@ export const PlayerSession = ({ player, onLeave }: PlayerSessionProps) => {
         isConnected={isConnected}
         notice={notice}
         driverText={driverText}
+        overrides={
+          overridesState?.schemaId === schema.id
+            ? overridesState.overrides
+            : undefined
+        }
         send={send}
         seq={seqRef.current}
         onLeave={leave}
@@ -336,6 +370,8 @@ type InGameProps = {
   notice: string | null;
   /** The driver's `{ text }` line, shown under the header for a few seconds. */
   driverText: string | null;
+  /** The driver's `set` / `labels` pushes for this schema. */
+  overrides?: ControlOverrides;
   send: (msg: KapulaPlayerClientMessage) => void;
   seq: SeqCounter;
   onLeave: () => void;
@@ -359,6 +395,7 @@ const InGame = ({
   isConnected,
   notice,
   driverText,
+  overrides,
   send,
   seq,
   onLeave,
@@ -447,6 +484,7 @@ const InGame = ({
           layoutOverride={customizable ? layout.override : null}
           seq={seq}
           background={snapshot.background}
+          overrides={overrides}
         />
         {menuVisible && (
           <SessionMenu
@@ -489,7 +527,7 @@ const InGamePhysical = ({
   send,
   seq,
   onLeave,
-}: Omit<InGameProps, "schema">) => {
+}: Omit<InGameProps, "schema" | "overrides">) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const paused = snapshot.state === "paused";
   const menuVisible = paused || menuOpen;

@@ -16,6 +16,8 @@ type KnobProps = {
   mode: "absolute" | "endless";
   defaultValue: number;
   label?: string;
+  /** A driver-pushed value: shown and held, never reported. */
+  external?: { value: number; rev: number };
   testId?: string;
   disabled: boolean;
   /** Absolute: value in [0, 1]. Endless: cumulative turns. `released`
@@ -34,6 +36,7 @@ export const Knob = ({
   mode,
   defaultValue,
   label,
+  external,
   testId,
   disabled,
   onChange,
@@ -52,6 +55,13 @@ export const Knob = ({
   useEffect(() => {
     onChangeRef.current(initial, false);
   }, [initial]);
+
+  useEffect(() => {
+    if (!external) return;
+    const next = endless ? external.value : clampKnob(external.value);
+    valueRef.current = next;
+    setValue(next);
+  }, [external?.rev]);
 
   const dy = (clientX: number, clientY: number) => {
     const el = ref.current;

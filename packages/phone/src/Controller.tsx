@@ -6,6 +6,7 @@ import {
   type KapulaBackground,
   type KapulaPlayerClientMessage,
 } from "@kapula/protocol";
+import type { ControlOverrides } from "./driver-payload.js";
 import { ControlWidget } from "./ControlWidget.js";
 import { applyLayoutOverride, type LayoutOverride } from "./layout-override.js";
 import { resolveLayout, type Viewport } from "./layout-utils.js";
@@ -34,6 +35,8 @@ type ControllerProps = {
   seq?: SeqCounter;
   /** The driver's background image, drawn behind the controls. */
   background?: KapulaBackground;
+  /** The driver's `set` / `labels` pushes; cleared by the parent on a schema switch. */
+  overrides?: ControlOverrides;
 };
 
 /**
@@ -54,6 +57,7 @@ export const Controller = ({
   layoutOverride = null,
   seq,
   background,
+  overrides,
 }: ControllerProps) => {
   const { setControl } = useInputSender(
     send,
@@ -154,6 +158,7 @@ export const Controller = ({
             disabled={disabled}
             setControl={setControl}
             onOpenText={openText}
+            overrides={overrides}
           />
         ))}
       {textControl && !disabled && (

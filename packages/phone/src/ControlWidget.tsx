@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import type { KapulaControl, KapulaInputValue } from "@kapula/protocol";
 import { roundAxis } from "./axis-utils.js";
 import { toggleNext } from "./control-state.js";
@@ -7,6 +7,7 @@ import { Fader } from "./Fader.js";
 import { Knob } from "./Knob.js";
 import { Joystick } from "./Joystick.js";
 import { RawTouchSurface } from "./RawTouchSurface.js";
+import type { ControlOverrides } from "./driver-payload.js";
 import type { ControlBox } from "./layout-override.js";
 import type { ResolvedControl } from "./layout-utils.js";
 
@@ -21,6 +22,8 @@ type ControlWidgetProps = {
   setControl: (id: string, value: KapulaInputValue, immediate: boolean) => void;
   /** Opens the text field of a `text` control (the live controller only). */
   onOpenText?: (controlId: string) => void;
+  /** The driver's `set` / `labels` pushes (driver-payload.ts). */
+  overrides?: ControlOverrides;
 };
 
 /**
@@ -34,8 +37,11 @@ export const ControlWidget = ({
   inert = false,
   setControl,
   onOpenText,
+  overrides,
 }: ControlWidgetProps) => {
   const control = resolved.control;
+  const label = overrides?.labels[control.id] ?? ("label" in control ? control.label : undefined);
+  const pushed = overrides?.values[control.id];
   const inertClass = inert ? " pointer-events-none" : "";
   if (control.type === "joystick") {
     const mode = control.mode;
@@ -47,7 +53,7 @@ export const ControlWidget = ({
         {mode === "dpad" ? (
           <Dpad
             size={resolved.width}
-            label={control.label}
+            label={label}
             testId={`control-${control.id}`}
             disabled={disabled}
             // Direction changes are edges like button presses: rare,
@@ -60,7 +66,12 @@ export const ControlWidget = ({
             height={resolved.height}
             mode={mode}
             spring={control.spring}
-            label={control.label}
+            label={label}
+            external={
+              pushed && typeof pushed.value !== "boolean"
+                ? { value: stickPush(mode, pushed.value), rev: pushed.rev }
+                : undefined
+            }
             testId={`control-${control.id}`}
             disabled={disabled}
             onChange={(x, y, released) =>
@@ -83,7 +94,12 @@ export const ControlWidget = ({
           axis={control.axis}
           spring={control.spring}
           defaultValue={control.default}
-          label={control.label}
+          label={label}
+          external={
+            typeof pushed?.value === "number"
+              ? { value: pushed.value, rev: pushed.rev }
+              : undefined
+          }
           testId={`control-${control.id}`}
           disabled={disabled}
           onChange={(value, released) =>
@@ -103,7 +119,12 @@ export const ControlWidget = ({
           size={Math.min(resolved.width, resolved.height)}
           mode={control.mode}
           defaultValue={control.default}
-          label={control.label}
+          label={label}
+          external={
+            typeof pushed?.value === "number"
+              ? { value: pushed.value, rev: pushed.rev }
+              : undefined
+          }
           testId={`control-${control.id}`}
           disabled={disabled}
           onChange={(value, released) =>
@@ -125,7 +146,7 @@ export const ControlWidget = ({
           height={resolved.height}
           disabled={disabled}
           setControl={setControl}
-          pad={{ label: control.label }}
+          pad={{ label }}
         />
       </div>
     );
@@ -141,9 +162,9 @@ export const ControlWidget = ({
         // focus that happens inside a completed tap.
         onClick={() => onOpenText?.(control.id)}
         onContextMenu={(e) => e.preventDefault()}
-        aria-label={control.label ?? "Type text"}
+        aria-label={label ?? "Type text"}
       >
-        ⌨{control.label ? ` ${control.label}` : ""}
+        ⌨{label ? ` ${label}` : ""}
       </button>
     );
   }
@@ -157,7 +178,12 @@ export const ControlWidget = ({
     return (
       <ToggleButton
         id={control.id}
-        label={control.label}
+        label={label ?? control.label}
+        pushed={
+          typeof pushed?.value === "boolean"
+            ? { value: pushed.value, rev: pushed.rev }
+            : undefined
+        }
         shape={control.shape ?? "round"}
         className={`absolute ${rounding} border-kp-border font-bold leading-tight overflow-hidden disabled:opacity-40 ${buttonClasses(resolved)}${inertClass}`}
         style={controlBoxStyle(resolved)}
@@ -181,7 +207,7 @@ export const ControlWidget = ({
       onPointerCancel={() => setControl(control.id, false, true)}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {control.label}
+      {label ?? control.label}
     </button>
   );
 };
@@ -195,6 +221,7 @@ export const ControlWidget = ({
 const ToggleButton = ({
   id,
   label,
+  pushed,
   shape,
   className,
   style,
@@ -203,6 +230,8 @@ const ToggleButton = ({
 }: {
   id: string;
   label: string;
+  /** A driver-pushed lit state: shown, never reported. */
+  pushed?: { value: boolean; rev: number };
   shape: string;
   className: string;
   style: React.CSSProperties;
@@ -211,6 +240,9 @@ const ToggleButton = ({
 }) => {
   const [on, setOn] = useState(false);
   const [pressed, setPressed] = useState(false);
+  useEffect(() => {
+    if (pushed) setOn(pushed.value);
+  }, [pushed?.rev]);
   return (
     <button
       disabled={disabled}
@@ -263,6 +295,17 @@ const axisValue = (
   const y = roundAxis(rawY);
   return mode === "x" ? { x } : mode === "y" ? { y } : { x, y };
 };
+
+/** A pushed stick value as an `{x, y}` pair; a bare number is the one axis of x/y sticks. */
+const stickPush = (
+  mode: "full" | "relative" | "x" | "y",
+  value: number | { x?: number; y?: number },
+) =>
+  typeof value === "number"
+    ? mode === "y"
+      ? { y: value }
+      : { x: value }
+    : value;
 
 /** CSS box for a control: the engine hands out centers, CSS wants corners. */
 export const controlBoxStyle = (
