@@ -169,6 +169,9 @@ any active state ──driver end / host end / driver away 3 min / 24h idle─�
             "zone": "left", "size": "large" },    // optional layout hints
           { "type": "joystick", "id": "aim", "mode": "x" },  // "x"|"y"|"dpad"
                                     // |"relative" (see "Joystick modes")
+          { "type": "fader", "id": "expr",  // a track + cap that stays put;
+            "axis": "v", "spring": false,  // "v"|"h", spring back on release
+            "default": 0 },         // start/spring value 0..1 (see "Faders")
           { "type": "button", "id": "fire", "label": "Fire", "zone": "right",
             "shape": "rect" },      // optional "round" (default) | "rect"
           { "type": "button", "id": "jump", "label": "Jump",
@@ -523,6 +526,25 @@ side, clamped to that circle. Two consequences a driver should count on:
 Values are ordinary axes otherwise — same range, same y-down convention, same
 ~30 fps throttle — so a driver that already handles `"full"` needs no new code
 to read a `"relative"` pad.
+
+### Faders
+
+A `fader` is a track with a cap that stays where the finger leaves it — the
+control a MIDI surface needs. Fields: `axis` (`"v"` default, a tall 1:3 track;
+`"h"`, a wide 3:1 one), `spring` (default `false`), `default` (0..1, default
+0), plus the usual `label`, `zone`, `size`, `x`, `y`. It is placed in a stick
+slot like a joystick and the layout editor moves it like any box.
+
+- **Wire value:** a bare number in [0, 1], rounded to three decimals — 0 is
+  the bottom (`"v"`) or left (`"h"`) end, 1 the top or right end.
+- **Initial value:** the first frame after the controller appears reports
+  `default`.
+- **Spring rule:** `spring: true` sends `default` on release (pitch-bend
+  style); `spring: false` keeps the last value, so the next frame still
+  carries where the cap was left.
+- **Dragging is relative:** the value follows the drag from where the finger
+  landed, so touching the track does not make the cap jump. Movement is
+  throttled like a stick (~30 fps); release is sent immediately.
 
 ### Physical gamepads
 

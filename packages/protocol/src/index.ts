@@ -184,6 +184,38 @@ export const kapulaJoystickControlSchema = z.object({
 });
 
 /**
+ * Which way a fader runs: "v" (default) is a tall track, "h" a wide one.
+ */
+export const kapulaFaderAxisSchema = z.enum(["v", "h"]);
+export type KapulaFaderAxis = z.infer<typeof kapulaFaderAxisSchema>;
+
+/**
+ * A fader: a track with a cap that stays where the finger leaves it, the
+ * first control a MIDI surface needs. Reports a bare number in [0, 1]
+ * (0 = bottom / left end, 1 = top / right end), rounded to three decimals.
+ * The first frame after the controller appears reports `default`.
+ *
+ * - `spring: false` (default): the value is kept on release.
+ * - `spring: true`: the cap returns to `default` on release and that value
+ *   is sent (pitch-bend style).
+ *
+ * Dragging is relative: the value follows the drag from where the finger
+ * landed, so touching the track does not make the cap jump.
+ */
+export const kapulaFaderControlSchema = z.object({
+  type: z.literal("fader"),
+  id: idSchema,
+  label: z.string().min(1).max(16).optional(),
+  axis: kapulaFaderAxisSchema.default("v"),
+  spring: z.boolean().default(false),
+  default: z.number().min(0).max(1).default(0),
+  zone: kapulaControlZoneSchema.optional(),
+  size: kapulaControlSizeSchema.optional(),
+  x: kapulaControlPositionSchema.optional(),
+  y: kapulaControlPositionSchema.optional(),
+});
+
+/**
  * What a gyro reports (all axes derived from device tilt only — beta/gamma,
  * i.e. pitch and roll; yaw needs the compass and drifts, so it is
  * deliberately not part of the protocol):
@@ -304,6 +336,7 @@ export const kapulaTextControlSchema = z.object({
 export const kapulaControlSchema = z.discriminatedUnion("type", [
   kapulaButtonControlSchema,
   kapulaJoystickControlSchema,
+  kapulaFaderControlSchema,
   kapulaGyroControlSchema,
   kapulaMotionControlSchema,
   kapulaRawControlSchema,
@@ -313,6 +346,7 @@ export const kapulaControlSchema = z.discriminatedUnion("type", [
 export type KapulaControl = z.infer<typeof kapulaControlSchema>;
 export type KapulaTouchpadControl = z.infer<typeof kapulaTouchpadControlSchema>;
 export type KapulaTextControl = z.infer<typeof kapulaTextControlSchema>;
+export type KapulaFaderControl = z.infer<typeof kapulaFaderControlSchema>;
 export type KapulaGyroControl = z.infer<typeof kapulaGyroControlSchema>;
 export type KapulaMotionControl = z.infer<typeof kapulaMotionControlSchema>;
 export type KapulaRawControl = z.infer<typeof kapulaRawControlSchema>;
@@ -878,8 +912,9 @@ export type KapulaRawTouch = z.infer<typeof kapulaRawTouchSchema>;
 /**
  * Buttons are booleans; joysticks report by mode — full: `{x, y}`,
  * single-axis: `{x}` / `{y}` (all axes normalized to [-1, 1]), dpad: a
- * direction string. A bare number is an analog scalar in [-1, 1] — today
- * only a physical gamepad's triggers send one (0 = released, 1 = pulled).
+ * direction string. A bare number is an analog scalar in [-1, 1] — a
+ * physical gamepad's triggers (0 = released, 1 = pulled) and a `fader`
+ * (position in [0, 1]) send one.
  * An array is a `raw` or `touchpad` control's fingers (empty when nothing
  * touches).
  */

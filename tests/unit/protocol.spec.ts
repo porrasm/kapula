@@ -783,3 +783,40 @@ test.describe("motion controls and stream", () => {
     expect(parsed.type).toBe("motion");
   });
 });
+
+test.describe("fader control", () => {
+  test("accepts a bare fader with defaults", async () => {
+    const { kapulaControlSchema } = await import("@kapula/protocol");
+    expect(kapulaControlSchema.parse({ type: "fader", id: "expr" })).toEqual({
+      type: "fader",
+      id: "expr",
+      axis: "v",
+      spring: false,
+      default: 0,
+    });
+  });
+
+  test("accepts options and rejects bad ones", async () => {
+    const { kapulaControlSchema } = await import("@kapula/protocol");
+    const ok = kapulaControlSchema.parse({
+      type: "fader",
+      id: "bend",
+      axis: "h",
+      spring: true,
+      default: 0.5,
+      zone: "left",
+    });
+    expect(ok).toMatchObject({ axis: "h", spring: true, default: 0.5 });
+    for (const bad of [
+      { default: 1.5 },
+      { default: -0.1 },
+      { axis: "x" },
+      { spring: "yes" },
+    ]) {
+      expect(
+        kapulaControlSchema.safeParse({ type: "fader", id: "f", ...bad })
+          .success,
+      ).toBe(false);
+    }
+  });
+});

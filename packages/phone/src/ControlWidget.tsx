@@ -1,6 +1,7 @@
 import type { KapulaInputValue } from "@kapula/protocol";
 import { roundAxis } from "./axis-utils.js";
 import { Dpad } from "./Dpad.js";
+import { Fader } from "./Fader.js";
 import { Joystick } from "./Joystick.js";
 import { RawTouchSurface } from "./RawTouchSurface.js";
 import type { ControlBox } from "./layout-override.js";
@@ -63,6 +64,28 @@ export const ControlWidget = ({
             }
           />
         )}
+      </div>
+    );
+  }
+  if (control.type === "fader") {
+    return (
+      <div
+        className={`absolute${inertClass}`}
+        style={controlBoxStyle(resolved)}
+      >
+        <Fader
+          width={resolved.width}
+          height={resolved.height}
+          axis={control.axis}
+          spring={control.spring}
+          defaultValue={control.default}
+          label={control.label}
+          testId={`control-${control.id}`}
+          disabled={disabled}
+          onChange={(value, released) =>
+            setControl(control.id, roundAxis(value), released)
+          }
+        />
       </div>
     );
   }

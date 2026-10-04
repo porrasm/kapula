@@ -155,7 +155,9 @@ const zoneOf = (control: KapulaControl): KapulaControlZone | undefined =>
  * are a stick's size and belong under a thumb just the same.
  */
 const isStickLike = (control: KapulaControl): boolean =>
-  control.type === "joystick" || control.type === "touchpad";
+  control.type === "joystick" ||
+  control.type === "touchpad" ||
+  control.type === "fader";
 
 /**
  * Controls the engine places as buttons: buttons, and `text` controls,
@@ -206,6 +208,11 @@ const stickDims = (
     const aspect = control.aspect ?? 1;
     const width = Math.min(d * aspect, Math.max(1, maxWidth));
     return { width, height: width / aspect };
+  }
+  if (control.type === "fader") {
+    return control.axis === "h"
+      ? { width: d, height: Math.max(48, d / 3) }
+      : { width: Math.max(48, d / 3), height: d };
   }
   const mode = control.type === "joystick" ? control.mode : "full";
   if (mode === "x") return { width: d, height: Math.max(48, d * 0.5) };

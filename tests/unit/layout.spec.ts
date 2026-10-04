@@ -870,3 +870,34 @@ test.describe("touchpad controls", () => {
     expect(needsLandscape(MOUSE)).toBe(true);
   });
 });
+
+test.describe("fader controls", () => {
+  const faderSchema = (extra: object = {}) =>
+    controlSchemaSchema.parse({
+      id: "faders",
+      name: "Faders",
+      controls: [{ type: "fader", id: "f", ...extra }],
+    });
+  const find = (schema: ControlSchema) =>
+    resolveLayout(schema, { width: 844, height: 390 }).controls.find(
+      (c) => c.control.id === "f",
+    )!;
+
+  test("a vertical fader is placed in a stick slot, drawn tall 1:3", () => {
+    const f = find(faderSchema());
+    expect(f.role).toBe("stick");
+    expect(f.height / f.width).toBeCloseTo(3, 1);
+  });
+
+  test("a horizontal fader is drawn wide 3:1", () => {
+    const f = find(faderSchema({ axis: "h" }));
+    expect(f.role).toBe("stick");
+    expect(f.width / f.height).toBeCloseTo(3, 1);
+  });
+
+  test("size hints scale the fader", () => {
+    const small = find(faderSchema({ size: "small" }));
+    const large = find(faderSchema({ size: "large" }));
+    expect(large.height).toBeGreaterThan(small.height);
+  });
+});
