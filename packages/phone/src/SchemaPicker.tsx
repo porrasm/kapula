@@ -26,6 +26,33 @@ type SchemaPickerProps = {
 const SELECTED_BORDER = "border border-transparent";
 
 /**
+ * The gated schema selection shared by the picker and the page strip: a tilt
+ * schema first asks for motion access (the tap is the iOS user gesture) and is
+ * only selected once a sensor is verified.
+ */
+export const useSchemaSelect = (
+  schemas: ControlSchema[],
+  onSelect: (schemaId: string) => void,
+) => {
+  const access = useGyroAccess();
+  const blocked = access === "denied" || access === "unavailable";
+  const select = async (schema: ControlSchema) => {
+    if (schemaNeedsMotionSensors(schema) && access !== "granted") {
+      // Resolves instantly when no permission gate exists; otherwise this tap
+      // is the required gesture. Only a verified sensor selects the layout.
+      if ((await requestGyroAccess()) !== "granted") return;
+    }
+    onSelect(schema.id);
+  };
+  const selectById = (schemaId: string) => {
+    const schema = schemas.find((s) => s.id === schemaId);
+    if (schema) void select(schema);
+    else onSelect(schemaId);
+  };
+  return { access, blocked, select, selectById };
+};
+
+/**
  * The control-layout buttons shown in the lobby and in the in-game menu.
  * Layouts with a gyro control carry a tilt badge, and are gated on motion
  * access: on iOS the selecting tap doubles as the user gesture the permission
@@ -42,19 +69,9 @@ export const SchemaPicker = ({
   onSelect,
   centered = false,
 }: SchemaPickerProps) => {
-  const access = useGyroAccess();
-  const blocked = access === "denied" || access === "unavailable";
+  const { access, blocked, select } = useSchemaSelect(schemas, onSelect);
   const anyGyro = schemas.some(schemaNeedsMotionSensors);
   const physicalSupported = isPhysicalGamepadSupported();
-
-  const select = async (schema: ControlSchema) => {
-    if (schemaNeedsMotionSensors(schema) && access !== "granted") {
-      // Resolves instantly when no permission gate exists; otherwise this tap
-      // is the required gesture. Only a verified sensor selects the layout.
-      if ((await requestGyroAccess()) !== "granted") return;
-    }
-    onSelect(schema.id);
-  };
 
   return (
     <div className="space-y-2">

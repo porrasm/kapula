@@ -652,3 +652,43 @@ test("a driver can pin controls by x/y and lock the layout against editing", asy
   driver.send({ type: "end" });
   driver.close();
 });
+
+test("slim chrome: 28px strip, tabs switch schema, menu opens, driver text overlays", async ({
+  page,
+  browser,
+  request,
+}) => {
+  const setupCode = await createHostSession(page);
+  const setup = await TestDriver.setup(request, setupCode, {
+    ...TANK_CONFIG,
+    chrome: "slim",
+    schemas: [
+      TANK_CONFIG.schemas[0],
+      { id: "alt", name: "Alt", controls: [{ type: "button", id: "go", label: "Go" }] },
+    ],
+  });
+  const driver = new TestDriver();
+  await driver.connect(setup.wsPath);
+  const alice = await joinAsPlayer(browser, setup.joinCode, "Alice");
+  await alice.setViewportSize({ width: 568, height: 320 });
+  await alice.getByTestId("ready-toggle").click();
+  driver.send({ type: "start" });
+
+  const strip = alice.getByTestId("page-strip");
+  await expect(strip).toBeVisible();
+  expect((await strip.boundingBox())!.height).toBeCloseTo(28, 0);
+  await expect(alice.getByTestId("page-tab-tank")).toHaveAttribute("aria-current", "page");
+
+  await alice.getByTestId("page-tab-alt").click();
+  await expect(alice.getByTestId("page-tab-alt")).toHaveAttribute("aria-current", "page");
+  await expect(alice.getByTestId("control-go")).toBeVisible();
+
+  driver.send({ type: "message", payload: { text: "Round 2" } });
+  await expect(alice.getByTestId("driver-text")).toHaveText("Round 2");
+  expect((await strip.boundingBox())!.height).toBeCloseTo(28, 0);
+
+  await alice.getByTestId("open-menu").click();
+  await expect(alice.getByTestId("session-menu")).toBeVisible();
+  driver.send({ type: "end" });
+  driver.close();
+});

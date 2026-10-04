@@ -31,3 +31,17 @@ test("config chrome: slim accepted, absent stays absent, bad value rejected", ()
   expect(kapulaSessionConfigSchema.parse({}).chrome).toBeUndefined();
   expect(kapulaSessionConfigSchema.safeParse({ chrome: "tiny" }).success).toBe(false);
 });
+
+test("schemaTabs: disabled follows gyro access and gamepad support", () => {
+  const cfg = {
+    schemas: [
+      { id: "a", name: "A", controls: [{ type: "button", id: "x" }] },
+      { id: "t", name: "Tilt", controls: [{ type: "gyro", id: "g" }] },
+    ],
+    allowPhysicalGamepad: true,
+  } as never;
+  expect(schemaTabs(cfg, "a").map((t) => t.disabled)).toEqual([false, false, false]);
+  expect(
+    schemaTabs(cfg, "a", { gyroBlocked: true, physicalSupported: false }).map((t) => t.disabled),
+  ).toEqual([false, true, true]);
+});

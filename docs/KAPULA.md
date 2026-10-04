@@ -841,7 +841,8 @@ panel) is the playground.
 **`chrome`** (config, `"full"` | `"slim"`, default `"full"`) picks the phone's
 in-game header. `"slim"` replaces it with a 28 px strip: the game name on the
 left, one tab per selectable schema in the middle (the current one
-highlighted; tapping sends `select_schema`, like the menu's picker; "Real
+highlighted; tapping sends `select_schema`, like the menu's picker, with the same gates: tilt schemas ask for motion
+access first and are disabled when it is denied or unavailable; "Real
 gamepad" is a tab only with `allowPhysicalGamepad`) and a small Menu button on
 the right. The controller is measured under the strip, and the driver's
 `{ text }` line overlays it. A config without `chrome` is unchanged. Selecting

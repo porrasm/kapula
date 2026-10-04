@@ -1,5 +1,7 @@
 import { schemaTabs } from "./page-strip-utils.js";
+import { useSchemaSelect } from "./SchemaPicker.js";
 import { Button } from "./ui.js";
+import { isPhysicalGamepadSupported } from "./usePhysicalGamepad.js";
 import type { KapulaSessionConfig } from "@kapula/protocol";
 
 export { schemaTabs, type SchemaTab } from "./page-strip-utils.js";
@@ -28,7 +30,11 @@ export const PageStrip = ({
   driverText,
   style,
 }: PageStripProps) => {
-  const tabs = schemaTabs(config, currentSchemaId);
+  const { blocked, selectById } = useSchemaSelect(config.schemas, onSelectSchema);
+  const tabs = schemaTabs(config, currentSchemaId, {
+    gyroBlocked: blocked,
+    physicalSupported: isPhysicalGamepadSupported(),
+  });
   return (
     <header
       className="relative flex items-center gap-2 px-2 border-b border-kp-border shrink-0 overflow-hidden"
@@ -43,14 +49,15 @@ export const PageStrip = ({
           <button
             key={tab.id}
             type="button"
-            className={`px-2 h-5 rounded text-xs whitespace-nowrap ${
+            className={`px-2 h-5 rounded text-xs whitespace-nowrap disabled:opacity-40 ${
               tab.current
                 ? "bg-kp-accent-primary text-kp-text-primary"
                 : "text-kp-text-secondary"
             }`}
             aria-current={tab.current ? "page" : undefined}
             data-testid={`page-tab-${tab.id}`}
-            onClick={() => onSelectSchema(tab.id)}
+            disabled={tab.disabled}
+            onClick={() => selectById(tab.id)}
           >
             {tab.name}
           </button>
