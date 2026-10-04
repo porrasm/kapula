@@ -9,6 +9,7 @@ export * from "./debug-utils.js";
 export * from "./driver-payload.js";
 export * from "./control-state.js";
 export * from "./fader-utils.js";
+export * from "./gesture-utils.js";
 export * from "./knob-utils.js";
 export * from "./gyro-utils.js";
 export * from "./input-throttle.js";

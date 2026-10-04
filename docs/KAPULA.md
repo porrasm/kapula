@@ -569,6 +569,14 @@ slot like a joystick and the layout editor moves it like any box.
 - **Dragging is relative:** the value follows the drag from where the finger
   landed, so touching the track does not make the cap jump. Movement is
   throttled like a stick (~30 fps); release is sent immediately.
+- **Fine mode and double-tap** (phone only, faders and knobs alike; the wire
+  still carries raw values): while a fader or knob is being dragged, a second
+  finger resting on the controller box, anywhere but on another control,
+  scales the drag by 0.1 for as long as it stays down (the drag re-anchors
+  when the finger lands or lifts, so the value does not jump). Two pointerups
+  on the control within 300 ms and 12 px set it to its `default` (a knob in
+  `endless` mode, to 0) and send a frame immediately. The math lives in
+  `gesture-utils.ts`.
 
 ### Knobs
 

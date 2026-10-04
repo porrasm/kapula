@@ -80,6 +80,21 @@ export const Controller = ({
       if (value !== undefined) seedControl(control.id, value);
     }
   }, [overrides?.values, schema, seedControl]);
+  // Fingers resting on the box's own surface (not on a control) are the
+  // fine-mode modifier.
+  const [fineMode, setFineMode] = useState(false);
+  const fineFingersRef = useRef(new Set<number>());
+  const releaseFine = (pointerId: number) => {
+    if (fineFingersRef.current.delete(pointerId)) {
+      setFineMode(fineFingersRef.current.size > 0);
+    }
+  };
+  useEffect(() => {
+    if (disabled) {
+      fineFingersRef.current.clear();
+      setFineMode(false);
+    }
+  }, [disabled]);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [viewport, setViewport] = useState<Viewport | null>(null);
   const frame = useContentFrame();
@@ -150,6 +165,16 @@ export const Controller = ({
       className="flex-1 relative overflow-hidden select-none"
       style={{ touchAction: "none", ...backgroundStyle(background) }}
       data-background={background?.url}
+      data-fine-mode={fineMode ? "true" : undefined}
+      onPointerDown={(e) => {
+        if (disabled) return;
+        const target = e.target as Element;
+        if (target.closest("[data-kp-widget]")) return;
+        fineFingersRef.current.add(e.pointerId);
+        setFineMode(true);
+      }}
+      onPointerUp={(e) => releaseFine(e.pointerId)}
+      onPointerCancel={(e) => releaseFine(e.pointerId)}
     >
       {measured && rawControl && (
         <RawTouchSurface
@@ -166,14 +191,20 @@ export const Controller = ({
           layoutOverride,
           viewport,
         ).controls.map((resolved) => (
-          <ControlWidget
+          <div
             key={resolved.control.id}
-            resolved={resolved}
-            disabled={disabled}
-            setControl={setControl}
-            onOpenText={openText}
-            overrides={overrides}
-          />
+            data-kp-widget
+            style={{ display: "contents" }}
+          >
+            <ControlWidget
+              resolved={resolved}
+              disabled={disabled}
+              setControl={setControl}
+              onOpenText={openText}
+              overrides={overrides}
+              fineMode={fineMode}
+            />
+          </div>
         ))}
       {textControl && !disabled && (
         <TextEntry

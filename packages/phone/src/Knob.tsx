@@ -7,6 +7,7 @@ import {
   knobTurnsFromDelta,
   knobValueFromDelta,
 } from "./knob-utils.js";
+import { registerTap, scaleDragDelta, type TapPoint } from "./gesture-utils.js";
 import { pointerDeltaInFrame } from "./pointer-utils.js";
 import { useContentFrame } from "./OrientedSurface.js";
 
@@ -20,6 +21,8 @@ type KnobProps = {
   external?: { value: number; rev: number };
   testId?: string;
   disabled: boolean;
+  /** A second finger is down on the controller: drags move at a tenth. */
+  fineMode?: boolean;
   /** Absolute: value in [0, 1]. Endless: cumulative turns. `released`
    * flushes immediately. Also called once on mount (default / 0). */
   onChange: (value: number, released: boolean) => void;
@@ -39,6 +42,7 @@ export const Knob = ({
   external,
   testId,
   disabled,
+  fineMode = false,
   onChange,
 }: KnobProps) => {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -47,7 +51,14 @@ export const Knob = ({
   const initial = endless ? 0 : defaultValue;
   const [value, setValue] = useState(initial);
   const valueRef = useRef(initial);
-  const startRef = useRef<{ value: number; dy: number } | null>(null);
+  const startRef = useRef<{
+    value: number;
+    dy: number;
+    fine: boolean;
+  } | null>(null);
+  const fineRef = useRef(fineMode);
+  fineRef.current = fineMode;
+  const lastTapRef = useRef<TapPoint | null>(null);
   const { synthetic } = useContentFrame();
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -115,14 +126,26 @@ export const Knob = ({
         if (y === null) return;
         pointerIdRef.current = e.pointerId;
         e.currentTarget.setPointerCapture(e.pointerId);
-        startRef.current = { value: valueRef.current, dy: y };
+        startRef.current = {
+          value: valueRef.current,
+          dy: y,
+          fine: fineRef.current,
+        };
       }}
       onPointerMove={(e) => {
         if (e.pointerId !== pointerIdRef.current || !startRef.current) return;
         const y = dy(e.clientX, e.clientY);
         if (y === null) return;
+        // Entering or leaving fine mode re-anchors the drag here.
+        if (startRef.current.fine !== fineRef.current) {
+          startRef.current = {
+            value: valueRef.current,
+            dy: y,
+            fine: fineRef.current,
+          };
+        }
         const start = startRef.current;
-        const delta = knobDragDelta(start.dy, y);
+        const delta = scaleDragDelta(knobDragDelta(start.dy, y), start.fine);
         set(
           endless
             ? knobTurnsFromDelta(start.value, delta)
@@ -134,7 +157,13 @@ export const Knob = ({
         if (e.pointerId !== pointerIdRef.current) return;
         pointerIdRef.current = null;
         startRef.current = null;
-        set(valueRef.current, true);
+        const tap = registerTap(lastTapRef.current, {
+          time: e.timeStamp,
+          x: e.clientX,
+          y: e.clientY,
+        });
+        lastTapRef.current = tap.last;
+        set(tap.double ? initial : valueRef.current, true);
       }}
       onPointerCancel={(e) => {
         if (e.pointerId !== pointerIdRef.current) return;

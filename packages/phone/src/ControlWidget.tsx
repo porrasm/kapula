@@ -24,6 +24,8 @@ type ControlWidgetProps = {
   onOpenText?: (controlId: string) => void;
   /** The driver's `set` / `labels` pushes (driver-payload.ts). */
   overrides?: ControlOverrides;
+  /** A second finger holds fine mode on the controller (faders, knobs). */
+  fineMode?: boolean;
 };
 
 /**
@@ -38,6 +40,7 @@ export const ControlWidget = ({
   setControl,
   onOpenText,
   overrides,
+  fineMode = false,
 }: ControlWidgetProps) => {
   const control = resolved.control;
   const label = overrides?.labels[control.id] ?? ("label" in control ? control.label : undefined);
@@ -102,6 +105,7 @@ export const ControlWidget = ({
           }
           testId={`control-${control.id}`}
           disabled={disabled}
+          fineMode={fineMode}
           onChange={(value, released) =>
             setControl(control.id, roundAxis(value), released)
           }
@@ -127,6 +131,7 @@ export const ControlWidget = ({
           }
           testId={`control-${control.id}`}
           disabled={disabled}
+          fineMode={fineMode}
           onChange={(value, released) =>
             setControl(control.id, roundAxis(value), released)
           }

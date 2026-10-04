@@ -4,6 +4,7 @@ import {
   faderReleaseValue,
   faderValueFromDelta,
 } from "./fader-utils.js";
+import { registerTap, scaleDragDelta, type TapPoint } from "./gesture-utils.js";
 import { pointerDeltaInFrame } from "./pointer-utils.js";
 import { useContentFrame } from "./OrientedSurface.js";
 
@@ -19,6 +20,8 @@ type FaderProps = {
   external?: { value: number; rev: number };
   testId?: string;
   disabled: boolean;
+  /** A second finger is down on the controller: drags move at a tenth. */
+  fineMode?: boolean;
   /** Value in [0, 1]; `released` flushes immediately. Also called once on
    * mount with the default. */
   onChange: (value: number, released: boolean) => void;
@@ -34,6 +37,7 @@ export const Fader = ({
   external,
   testId,
   disabled,
+  fineMode = false,
   onChange,
 }: FaderProps) => {
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -44,7 +48,11 @@ export const Fader = ({
     value: number;
     dx: number;
     dy: number;
+    fine: boolean;
   } | null>(null);
+  const fineRef = useRef(fineMode);
+  fineRef.current = fineMode;
+  const lastTapRef = useRef<TapPoint | null>(null);
   const { synthetic } = useContentFrame();
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -111,24 +119,49 @@ export const Fader = ({
         if (!d) return;
         pointerIdRef.current = e.pointerId;
         e.currentTarget.setPointerCapture(e.pointerId);
-        startRef.current = { value: valueRef.current, dx: d.dx, dy: d.dy };
+        startRef.current = {
+          value: valueRef.current,
+          dx: d.dx,
+          dy: d.dy,
+          fine: fineRef.current,
+        };
       }}
       onPointerMove={(e) => {
         if (e.pointerId !== pointerIdRef.current || !startRef.current) return;
         const d = delta(e.clientX, e.clientY);
         if (!d) return;
+        // Entering or leaving fine mode re-anchors the drag here, so the
+        // cap does not jump.
+        if (startRef.current.fine !== fineRef.current) {
+          startRef.current = {
+            value: valueRef.current,
+            dx: d.dx,
+            dy: d.dy,
+            fine: fineRef.current,
+          };
+        }
         const start = startRef.current;
         set(
           faderValueFromDelta(
             start.value,
-            faderAxisDelta(axis, start, d),
+            scaleDragDelta(faderAxisDelta(axis, start, d), start.fine),
             travel,
           ),
           false,
         );
       }}
       onPointerUp={(e) => {
-        if (e.pointerId === pointerIdRef.current) release();
+        if (e.pointerId !== pointerIdRef.current) return;
+        const tap = registerTap(lastTapRef.current, {
+          time: e.timeStamp,
+          x: e.clientX,
+          y: e.clientY,
+        });
+        lastTapRef.current = tap.last;
+        if (!tap.double) return release();
+        pointerIdRef.current = null;
+        startRef.current = null;
+        set(defaultValue, true);
       }}
       onPointerCancel={(e) => {
         if (e.pointerId === pointerIdRef.current) release();
