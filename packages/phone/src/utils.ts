@@ -6,6 +6,7 @@
  */
 export * from "./axis-utils.js";
 export * from "./debug-utils.js";
+export * from "./device-utils.js";
 export * from "./driver-payload.js";
 export * from "./control-state.js";
 export * from "./fader-utils.js";

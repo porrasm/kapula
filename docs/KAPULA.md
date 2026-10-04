@@ -390,6 +390,13 @@ every connection, not only in the setup response. Message shapes: see
 
 - Player → server: `input` (see below), `motion` (see "Raw motion stream"),
   `text {controlId, text}` (see "Text input"), `set_ready`, `select_schema`,
+  `device_info {device: {class: "phone"|"tablet", width, height, touch, motion}}`
+  (any live state; sent right after each (re)connect and on viewport changes,
+  debounced 500 ms; `class` is tablet when the shorter viewport side is
+  ≥ 600 CSS px, `motion` is whether the tilt probe found a usable sensor, false
+  until probed; the server keeps it per connection and broadcasts
+  `player_updated` with `player.device`, and `snapshot` players carry it too;
+  absent until the phone reports),
   `update_profile {name?, color?}` (lobby-only; rejected with an `error` when
   the name/color is taken), `leave` (allowed in **any** state — a paused or
   stuck session must never trap a player; frees the name/color slot, kills

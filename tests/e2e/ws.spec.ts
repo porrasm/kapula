@@ -422,6 +422,35 @@ test.describe.serial("full protocol flow over one session", () => {
     );
   });
 
+  test("device_info reaches the driver as player_updated.device and the next snapshot", async () => {
+    const device = { class: "tablet", width: 1024, height: 768, touch: true, motion: false };
+    const cursor = driver.mark();
+    p1.send({ type: "device_info", device });
+    const updated = await driver.waitFor(
+      (m) =>
+        m.type === "player_updated" &&
+        (m.player as any).playerId === p1Id &&
+        (m.player as any).device !== undefined,
+      { after: cursor },
+    );
+    expect((updated.player as any).device).toEqual(device);
+
+    // Malformed device info is dropped without a response.
+    p1.send({ type: "device_info", device: { ...device, class: "watch" } } as any);
+    await p1.expectNoResponse((m) => m.type === "error");
+
+    // A reconnecting driver sees it in the snapshot.
+    const oldDriver = driver;
+    const newDriver = await WsClient.open(`?role=driver&token=${driverToken}`, {
+      label: "driver-device-replacement",
+    });
+    expect((await oldDriver.waitForClose()).code).toBe(4010);
+    const snapshot = await newDriver.waitForType("snapshot");
+    driver = newDriver;
+    const players = (snapshot.snapshot as any).players as any[];
+    expect(players.find((p) => p.playerId === p1Id).device).toEqual(device);
+  });
+
   test("malformed, unknown and oversized frames never take the session down", async () => {
     // Garbage and schema-invalid messages are ignored without a response.
     p1.sendRaw("this is not json");

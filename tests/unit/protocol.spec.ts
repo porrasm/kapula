@@ -10,6 +10,7 @@ import {
   dpadToVector,
   kapulaCodeSchema,
   kapulaErrorCodeSchema,
+  kapulaPlayerInfoSchema,
   kapulaInputFrameSchema,
   kapulaMotionSampleSchema,
   kapulaPlayerClientMessageSchema,
@@ -913,4 +914,49 @@ test.describe("schema rate", () => {
     expect(controlSchemaSchema.parse(base).rate).toBeUndefined();
     expect(controlSchemaSchema.safeParse({ ...base, rate: "turbo" }).success).toBe(false);
   });
+});
+
+test.describe("device_info", () => {
+  const device = { class: "phone", width: 844, height: 390, touch: true, motion: false };
+
+  test("is a player message in any state and validates the device", () => {
+    expect(
+      kapulaPlayerClientMessageSchema.safeParse({ type: "device_info", device }).success,
+    ).toBe(true);
+    for (const bad of [
+      { ...device, class: "watch" },
+      { ...device, width: 1.5 },
+      { ...device, touch: "yes" },
+      { class: "phone", width: 1, height: 1, touch: true },
+    ]) {
+      expect(
+        kapulaPlayerClientMessageSchema.safeParse({ type: "device_info", device: bad }).success,
+      ).toBe(false);
+    }
+  });
+
+  test("player info carries an optional device; old info still validates", () => {
+    const info = {
+      playerId: "p",
+      name: "A",
+      color: "#FF6B6B",
+      ready: false,
+      connected: true,
+      schemaId: "s",
+    };
+    expect(kapulaPlayerInfoSchema.safeParse(info).success).toBe(true);
+    expect(kapulaPlayerInfoSchema.parse({ ...info, device }).device).toEqual(device);
+    expect(kapulaPlayerInfoSchema.safeParse({ ...info, device: { class: "x" } }).success).toBe(false);
+    expect(
+      kapulaServerMessageSchema.safeParse({ type: "player_updated", player: { ...info, device } }).success,
+    ).toBe(true);
+  });
+});
+
+test("deviceInfoFor derives class from the shorter side", async () => {
+  const { deviceInfoFor } = await import("@kapula/phone/utils");
+  expect(deviceInfoFor(844, 390, true, false).class).toBe("phone");
+  expect(deviceInfoFor(390, 844, true, false).class).toBe("phone");
+  expect(deviceInfoFor(1024, 768, true, true).class).toBe("tablet");
+  expect(deviceInfoFor(1280, 599.6, false, false)).toMatchObject({ class: "tablet", height: 600 });
 });

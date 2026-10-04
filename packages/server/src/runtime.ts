@@ -4,6 +4,7 @@ import {
   kapulaBackgroundFitSchema,
   kapulaSessionConfigSchema,
   type KapulaBackground,
+  type KapulaDeviceInfo,
   type KapulaPlayerInfo,
   type KapulaServerMessage,
   type KapulaSessionSnapshot,
@@ -36,6 +37,8 @@ export type SessionRuntime = {
    * stale and dropped instead of relayed.
    */
   lastInputSeq: Map<string, number>;
+  /** Latest device_info per connected player; connection-scoped, never stored. */
+  devices: Map<string, KapulaDeviceInfo>;
   lastActivityTouch: number;
   /** Armed while the driver is away; fires the driver-lost end of session. */
   driverLostTimer: NodeJS.Timeout | null;
@@ -84,6 +87,7 @@ export const toPlayerInfo = (
   ready: player.ready,
   connected: runtime.players.get(player.id)?.readyState === WebSocket.OPEN,
   schemaId: player.schemaId ?? "",
+  ...(runtime.devices.has(player.id) ? { device: runtime.devices.get(player.id) } : {}),
 });
 
 export const applyStateChange = (
@@ -187,6 +191,7 @@ export const createSessionRuntimes = (ctx: KapulaContext) => {
         host: null,
         players: new Map(),
         lastInputSeq: new Map(),
+        devices: new Map(),
         lastActivityTouch: 0,
         driverLostTimer: null,
       };
@@ -269,6 +274,7 @@ export const createSessionRuntimes = (ctx: KapulaContext) => {
     const ws = runtime.players.get(playerId);
     runtime.players.delete(playerId);
     runtime.lastInputSeq.delete(playerId);
+    runtime.devices.delete(playerId);
     const removed = await store.markPlayerLeft(playerId);
     if (removed) broadcast(runtime, { type: "player_left", playerId });
     ws?.close(close.code, close.reason);

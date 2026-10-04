@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDeviceInfo } from "./useDeviceInfo.js";
 import {
   PHYSICAL_GAMEPAD_SCHEMA_ID,
   type ControlSchema,
@@ -153,6 +154,7 @@ export const PlayerSession = ({ player, onLeave }: PlayerSessionProps) => {
   }, []);
 
   const { isConnected, fatalClose, send } = useKapulaSocket(url, onMessage);
+  useDeviceInfo(isConnected, send);
 
   // Everything below renders in position: fixed layers; a leftover window
   // scroll (the lobby's keyboard, a scrolled landing page) would paint them

@@ -907,6 +907,20 @@ export const kapulaBackgroundSchema = z.object({
 });
 export type KapulaBackground = z.infer<typeof kapulaBackgroundSchema>;
 
+/**
+ * What the phone reports about itself with `device_info`. `class` comes from
+ * the shorter viewport side (>= 600 CSS px is a tablet); `motion` says whether
+ * a usable tilt sensor was found.
+ */
+export const kapulaDeviceInfoSchema = z.object({
+  class: z.enum(["phone", "tablet"]),
+  width: z.number().int().nonnegative(),
+  height: z.number().int().nonnegative(),
+  touch: z.boolean(),
+  motion: z.boolean(),
+});
+export type KapulaDeviceInfo = z.infer<typeof kapulaDeviceInfoSchema>;
+
 export const kapulaPlayerInfoSchema = z.object({
   playerId: z.string(),
   name: z.string(),
@@ -914,6 +928,8 @@ export const kapulaPlayerInfoSchema = z.object({
   ready: z.boolean(),
   connected: z.boolean(),
   schemaId: z.string(),
+  /** Last `device_info` of the current connection; absent until one arrives. */
+  device: kapulaDeviceInfoSchema.optional(),
 });
 export type KapulaPlayerInfo = z.infer<typeof kapulaPlayerInfoSchema>;
 
@@ -1113,6 +1129,8 @@ export const kapulaPlayerClientMessageSchema = z.discriminatedUnion("type", [
     name: kapulaPlayerNameSchema.optional(),
     color: kapulaColorSchema.optional(),
   }),
+  /** Any live state: the phone's device class and viewport, after each (re)connect and resize. */
+  z.object({ type: z.literal("device_info"), device: kapulaDeviceInfoSchema }),
   /**
    * Full controller state. `seq` is phone-owned and strictly increasing for
    * the player's lifetime (see kapulaInputFrameSchema); the server drops a
