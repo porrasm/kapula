@@ -109,6 +109,12 @@ export const Fader = ({
       data-testid={testId}
       data-axis={axis}
       data-value={value}
+      role="slider"
+      aria-label={label}
+      aria-orientation={vertical ? "vertical" : "horizontal"}
+      aria-valuemin={0}
+      aria-valuemax={1}
+      aria-valuenow={Number(value.toFixed(3))}
       className={`relative bg-kp-bg-tertiary border border-kp-border rounded-2xl select-none overflow-hidden ${
         disabled ? "opacity-40" : ""
       }`}

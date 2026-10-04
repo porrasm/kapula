@@ -164,6 +164,8 @@ any active state ──driver end / host end / driver away 3 min / 24h idle─�
         "name": "Tank",
         "orientation": "auto",      // optional layout hint: "auto" (default)
                                     // | "landscape" | "portrait"
+        "rate": "standard",         // "fast": ~60 fps input frames instead of
+                                    // ~30 (see "Input model")
         "controls": [               // 1–64 controls, unique kebab-case ids,
                                     // ordered most-important-first (see
                                     // "Controller layout" below)
@@ -183,9 +185,11 @@ any active state ──driver end / host end / driver away 3 min / 24h idle─�
             "mode": "toggle" },     // "momentary" (default) | "toggle": each
                                     // tap flips a boolean, drawn lit while true
           { "type": "button", "id": "jump", "label": "Jump",
-            "x": 85, "y": 40 },     // optional exact center, % of the
+            "x": 85, "y": 40,       // optional exact center, % of the
                                     // controller's width/height (see
-                                    // "Exact positions")
+                                    // "Exact positions"), plus "w"/"h"
+                                    // size % and a "color" "#RRGGBB"
+            "w": 10, "h": 16, "color": "#FF6B6B" },
           { "type": "gyro", "id": "lean", "range": 45 },  // tilt sensor (max 1
                           // per schema); mode "full"|"x"|"y", range in degrees
           { "type": "text", "id": "answer", "label": "Answer",  // a button
@@ -1068,8 +1072,9 @@ image).
   touch-down to lift-off; a new finger takes the lowest free slot, so ids
   are small and reused. An 11th finger is ignored until one lifts.
 - Touch-downs and lifts flush immediately (edges, like buttons); movement
-  is coalesced at ~60 fps — any schema with a `raw` or `touchpad` control
-  uses the faster throttle (`POINTER_THROTTLE_MS` in `useInputSender.ts`),
+  is coalesced at ~60 fps — any schema with a `raw` or `touchpad` control,
+  or one that sets `rate: "fast"`, uses the faster throttle
+  (`POINTER_THROTTLE_MS`, chosen by `inputThrottleMs` in `input-throttle.ts`);
   other schemas keep ~30 fps.
 - It is the background, not a slot: the layout engine places nothing for
   it, and `Controller` renders `RawTouchSurface` over the whole box *under*
@@ -1335,7 +1340,7 @@ What it does:
   y-only and dpad; Aim pairs a walking stick with a `relative` aiming pad;
   Tilt and Wii cover the two sensor control types; Fixed pins every control
   with `x`/`y` and sets `disallowLayoutCustomization`; Touch is the `raw`
-  surface, alone and with tilt; Roster is the recovery path). It
+  surface, alone and with tilt; Roster is the recovery path; Surface is a slim-chrome, fast-rate control panel of faders, knobs, a toggle, an XY stick and a 4×4 pad grid, plus a Transport page). It
   prefills the admin's own pending
   session's setup code and
   can create a session right there, so the whole loop works from one page.
