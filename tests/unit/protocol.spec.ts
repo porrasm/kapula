@@ -361,12 +361,19 @@ test.describe("joystick modes", () => {
         controls: [{ type: "joystick", id: "s", mode: "diagonal" }],
       }),
     ).toThrow();
-    // Buttons silently ignore an accidental mode key (zod strips it) but the
-    // result must not carry one.
+    // Buttons have their own mode (momentary | toggle): a joystick mode is
+    // rejected there, and a button without one carries none.
+    expect(() =>
+      controlSchemaSchema.parse({
+        id: "b",
+        name: "B",
+        controls: [{ type: "button", id: "a", label: "A", mode: "x" }],
+      }),
+    ).toThrow();
     const parsed = controlSchemaSchema.parse({
       id: "b",
       name: "B",
-      controls: [{ type: "button", id: "a", label: "A", mode: "x" }],
+      controls: [{ type: "button", id: "a", label: "A" }],
     });
     expect("mode" in parsed.controls[0]).toBe(false);
   });

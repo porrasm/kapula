@@ -1,5 +1,7 @@
+import { useState } from "react";
 import type { KapulaInputValue } from "@kapula/protocol";
 import { roundAxis } from "./axis-utils.js";
+import { toggleNext } from "./control-state.js";
 import { Dpad } from "./Dpad.js";
 import { Fader } from "./Fader.js";
 import { Knob } from "./Knob.js";
@@ -57,6 +59,7 @@ export const ControlWidget = ({
             width={resolved.width}
             height={resolved.height}
             mode={mode}
+            spring={control.spring}
             label={control.label}
             testId={`control-${control.id}`}
             disabled={disabled}
@@ -150,6 +153,19 @@ export const ControlWidget = ({
   // "rect" squares off the corners — a circle under a thumb, a pill on the
   // shoulder / aux rows otherwise.
   const rounding = control.shape === "rect" ? "rounded-xl" : "rounded-full";
+  if (control.mode === "toggle") {
+    return (
+      <ToggleButton
+        id={control.id}
+        label={control.label}
+        shape={control.shape ?? "round"}
+        className={`absolute ${rounding} border-kp-border font-bold leading-tight overflow-hidden disabled:opacity-40 ${buttonClasses(resolved)}${inertClass}`}
+        style={controlBoxStyle(resolved)}
+        disabled={disabled}
+        setControl={setControl}
+      />
+    );
+  }
   return (
     <button
       disabled={disabled}
@@ -166,6 +182,69 @@ export const ControlWidget = ({
       onContextMenu={(e) => e.preventDefault()}
     >
       {control.label}
+    </button>
+  );
+};
+
+/**
+ * A `mode: "toggle"` button: each tap (pointerup inside the button) flips a
+ * boolean that is sent as the control's value and drawn as a persistent lit
+ * state (the `active:` styling as a plain class). Inert editor boxes ignore
+ * pointers, so the layout editor never toggles it.
+ */
+const ToggleButton = ({
+  id,
+  label,
+  shape,
+  className,
+  style,
+  disabled,
+  setControl,
+}: {
+  id: string;
+  label: string;
+  shape: string;
+  className: string;
+  style: React.CSSProperties;
+  disabled: boolean;
+  setControl: ControlWidgetProps["setControl"];
+}) => {
+  const [on, setOn] = useState(false);
+  const [pressed, setPressed] = useState(false);
+  return (
+    <button
+      disabled={disabled}
+      data-testid={`control-${id}`}
+      data-shape={shape}
+      data-mode="toggle"
+      aria-pressed={on}
+      className={`${className} ${
+        on || pressed
+          ? "bg-kp-accent-primary text-kp-accent-on-primary"
+          : "bg-kp-bg-tertiary text-kp-text-primary"
+      }`}
+      style={{ ...style, touchAction: "none" }}
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setPressed(true);
+      }}
+      onPointerUp={(e) => {
+        setPressed(false);
+        const r = e.currentTarget.getBoundingClientRect();
+        const inside =
+          e.clientX >= r.left &&
+          e.clientX <= r.right &&
+          e.clientY >= r.top &&
+          e.clientY <= r.bottom;
+        if (!inside) return;
+        const next = toggleNext(on);
+        setOn(next);
+        setControl(id, next, true);
+      }}
+      onPointerCancel={() => setPressed(false)}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      {label}
     </button>
   );
 };

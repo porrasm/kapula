@@ -177,6 +177,9 @@ any active state ──driver end / host end / driver away 3 min / 24h idle─�
             "default": 0 },         // (see "Knobs")
           { "type": "button", "id": "fire", "label": "Fire", "zone": "right",
             "shape": "rect" },      // optional "round" (default) | "rect"
+          { "type": "button", "id": "mute", "label": "M",
+            "mode": "toggle" },     // "momentary" (default) | "toggle": each
+                                    // tap flips a boolean, drawn lit while true
           { "type": "button", "id": "jump", "label": "Jump",
             "x": 85, "y": 40 },     // optional exact center, % of the
                                     // controller's width/height (see
@@ -512,6 +515,13 @@ draws it:
 | `"x"` / `"y"` | `{x}` / `{y}` | pill track along that axis |
 | `"dpad"` | `"c"`/`"u"`/`"ur"`/… | square with four arrows |
 
+**`spring`** (optional boolean, default `true`): with `false`, a `"full"` or
+`"relative"` stick (and the `"x"` / `"y"` tracks) keeps the value where the
+finger lifted instead of sending the center, and the knob stays drawn there.
+The next touch continues from that value without a jump: the drag is measured
+from the landing point, as `"relative"` already does. `"dpad"` ignores
+`spring` (it always returns to `"c"`).
+
 `"relative"` is the precision mode. There is no home position: the point the
 finger lands on becomes that touch's neutral, and the value is the drag from
 there — full deflection at `RELATIVE_STICK_TRAVEL` (0.35) of the pad's shorter
@@ -529,6 +539,13 @@ side, clamped to that circle. Two consequences a driver should count on:
 Values are ordinary axes otherwise — same range, same y-down convention, same
 ~30 fps throttle — so a driver that already handles `"full"` needs no new code
 to read a `"relative"` pad.
+
+### Toggle buttons
+
+A `button` with `"mode": "toggle"` (default `"momentary"`) flips on each tap
+(a pointerup inside the button) and is drawn lit while true. The wire value is
+still a boolean: the driver sees the state, not the taps. The phone starts a
+toggle as off and keeps the state only while the controller is mounted.
 
 ### Faders
 

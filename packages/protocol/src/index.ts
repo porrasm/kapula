@@ -149,6 +149,13 @@ export const kapulaButtonControlSchema = z.object({
   x: kapulaControlPositionSchema.optional(),
   y: kapulaControlPositionSchema.optional(),
   shape: kapulaButtonShapeSchema.optional(),
+  /**
+   * "momentary" (default): true while held. "toggle": each tap (pointerup
+   * inside the button) flips a boolean, and the phone draws the button lit
+   * while it is true. The wire value stays a boolean — the driver sees the
+   * state, not the taps.
+   */
+  mode: z.enum(["momentary", "toggle"]).optional(),
 });
 
 /**
@@ -177,6 +184,13 @@ export const kapulaJoystickControlSchema = z.object({
   id: idSchema,
   label: z.string().min(1).max(16).optional(),
   mode: kapulaJoystickModeSchema.default("full"),
+  /**
+   * Default true: the stick returns to center on release and sends it. With
+   * false a "full" / "relative" stick (and the "x" / "y" tracks) keeps the
+   * value where the finger lifted; the next touch continues from it without
+   * a jump. "dpad" ignores it.
+   */
+  spring: z.boolean().optional(),
   zone: kapulaControlZoneSchema.optional(),
   size: kapulaControlSizeSchema.optional(),
   x: kapulaControlPositionSchema.optional(),

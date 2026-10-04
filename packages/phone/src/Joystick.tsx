@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { relativeStickTravel, relativeStickValue } from "./layout-utils.js";
 import { pointerDeltaInFrame } from "./pointer-utils.js";
+import { stickReleaseValue } from "./control-state.js";
 import { useContentFrame } from "./OrientedSurface.js";
 
 type JoystickProps = {
@@ -11,6 +12,8 @@ type JoystickProps = {
   /** "full" reports both axes; "x"/"y" constrain the knob to one axis;
    * "relative" reports both axes measured from wherever the touch landed. */
   mode: "full" | "relative" | "x" | "y";
+  /** Default true; false keeps the value on release (see the protocol). */
+  spring?: boolean;
   label?: string;
   testId?: string;
   disabled: boolean;
@@ -23,6 +26,7 @@ export const Joystick = ({
   width,
   height,
   mode,
+  spring = true,
   label,
   testId,
   disabled,
@@ -36,6 +40,11 @@ export const Joystick = ({
   // state because the first value is needed inside the same pointerdown.
   const originRef = useRef<{ x: number; y: number } | null>(null);
   const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null);
+  // Value (as px offset) held from the last release of a non-spring stick, and
+  // where the current touch landed, so the drag continues from the hold.
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const anchorRef = useRef({ x: 0, y: 0 });
+  const lastValueRef = useRef({ x: 0, y: 0 });
   const { synthetic } = useContentFrame();
 
   const relative = mode === "relative";
@@ -65,14 +74,19 @@ export const Joystick = ({
   const updateFromPointer = (clientX: number, clientY: number) => {
     const delta = padDelta(clientX, clientY);
     if (!delta) return;
-    let { dx, dy } = delta;
+    let dx = delta.dx - anchorRef.current.x;
+    let dy = delta.dy - anchorRef.current.y;
     if (relative) {
+      dx = delta.dx;
+      dy = delta.dy;
       // Measured from the touch-down point, not the pad's center, and never
       // clamped to the pad: a drag that leaves the box keeps steering (the
       // pointer is captured) until the finger lifts.
       const from = originRef.current ?? { x: dx, y: dy };
       const value = relativeStickValue(dx - from.x, dy - from.y, travel);
-      setOffset({ x: value.dx, y: value.dy });
+      offsetRef.current = { x: value.dx, y: value.dy };
+      lastValueRef.current = { x: value.x, y: value.y };
+      setOffset(offsetRef.current);
       onChange(value.x, value.y, false);
       return;
     }
@@ -86,26 +100,50 @@ export const Joystick = ({
       dx = Math.max(-maxX, Math.min(maxX, dx));
       dy = Math.max(-maxY, Math.min(maxY, dy));
     }
-    setOffset({ x: dx, y: dy });
-    onChange(maxX > 0 ? dx / maxX : 0, maxY > 0 ? dy / maxY : 0, false);
+    offsetRef.current = { x: dx, y: dy };
+    lastValueRef.current = {
+      x: maxX > 0 ? dx / maxX : 0,
+      y: maxY > 0 ? dy / maxY : 0,
+    };
+    setOffset(offsetRef.current);
+    onChange(lastValueRef.current.x, lastValueRef.current.y, false);
   };
+
+  const padDeltaX = (cx: number, cy: number) => padDelta(cx, cy)?.dx ?? 0;
+  const padDeltaY = (cx: number, cy: number) => padDelta(cx, cy)?.dy ?? 0;
 
   const press = (clientX: number, clientY: number) => {
     if (relative) {
       const delta = padDelta(clientX, clientY);
       if (!delta) return;
-      originRef.current = { x: delta.dx, y: delta.dy };
+      // A held (non-spring) value shifts the origin so the drag continues
+      // from it instead of from neutral.
+      originRef.current = {
+        x: delta.dx - offsetRef.current.x,
+        y: delta.dy - offsetRef.current.y,
+      };
       setOrigin(originRef.current);
+    } else {
+      anchorRef.current = {
+        x: padDeltaX(clientX, clientY) - offsetRef.current.x,
+        y: padDeltaY(clientX, clientY) - offsetRef.current.y,
+      };
     }
     updateFromPointer(clientX, clientY);
   };
 
   const release = () => {
     pointerIdRef.current = null;
-    originRef.current = null;
-    setOrigin(null);
-    setOffset({ x: 0, y: 0 });
-    onChange(0, 0, true);
+    const value = stickReleaseValue(spring, lastValueRef.current);
+    if (spring) {
+      originRef.current = null;
+      setOrigin(null);
+      offsetRef.current = { x: 0, y: 0 };
+      lastValueRef.current = { x: 0, y: 0 };
+      setOffset(offsetRef.current);
+    }
+    // Without spring the knob stays drawn (and the origin ring) where it is.
+    onChange(value.x, value.y, true);
   };
 
   // A relative pad has no home position, so the released knob sits in the
