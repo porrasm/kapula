@@ -16,6 +16,7 @@ export * from "./layout-override.js";
 export * from "./layout-utils.js";
 export * from "./motion-utils.js";
 export * from "./orientation-utils.js";
+export * from "./page-strip-utils.js";
 export * from "./physical-gamepad-utils.js";
 export * from "./player-storage.js";
 export * from "./pointer-utils.js";

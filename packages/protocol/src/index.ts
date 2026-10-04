@@ -671,6 +671,14 @@ const kapulaSessionConfigInputSchema = z.object({
    * false — players own their layout.
    */
   disallowLayoutCustomization: z.boolean().default(false),
+  /**
+   * The phone's in-game chrome. `"full"` (default, same as absent) is the
+   * usual header with the player name and Menu button. `"slim"` shrinks it to
+   * a 28 px strip — game name, one tab per selectable schema, a small Menu
+   * button — leaving the controller as much of the screen as possible, for
+   * tablet mixers and the like. Carried verbatim.
+   */
+  chrome: z.enum(["full", "slim"]).optional(),
   /** Default 1; derived from the roster when one is given. */
   minPlayers: z.number().int().min(1).max(KAPULA_MAX_PLAYERS_LIMIT).optional(),
   /** Default 8; derived from the roster when one is given. */

@@ -156,6 +156,8 @@ any active state ──driver end / host end / driver away 3 min / 24h idle─�
                                     // editor and ignores stored edits: the
                                     // controller is exactly as described
                                     // (see "Exact positions" below)
+    "chrome": "full",               // "slim": 28 px page strip instead of the
+                                    // header (see "Slim chrome" below)
     "schemas": [                    // 1–32 control schemas; players pick one
       {
         "id": "tank",
@@ -833,6 +835,17 @@ a hinted or heuristic layout, or position controls and still let players
 adjust them. Both are purely additive: an old driver sends neither and gets
 exactly what it did before. The `Fixed` debug preset (an arcade cabinet
 panel) is the playground.
+
+### Slim chrome
+
+**`chrome`** (config, `"full"` | `"slim"`, default `"full"`) picks the phone's
+in-game header. `"slim"` replaces it with a 28 px strip: the game name on the
+left, one tab per selectable schema in the middle (the current one
+highlighted; tapping sends `select_schema`, like the menu's picker; "Real
+gamepad" is a tab only with `allowPhysicalGamepad`) and a small Menu button on
+the right. The controller is measured under the strip, and the driver's
+`{ text }` line overlays it. A config without `chrome` is unchanged. Selecting
+"Real gamepad" shows the usual full-chrome bridge screen.
 
 ### Player layout editor
 

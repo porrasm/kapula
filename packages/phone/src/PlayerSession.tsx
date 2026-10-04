@@ -14,6 +14,7 @@ import { DRIVER_TEXT_MS, parseDriverPayload } from "./driver-payload.js";
 import { LayoutEditor } from "./LayoutEditor.js";
 import { layoutModeForOrientation } from "./layout-override.js";
 import { canCustomizeLayout } from "./layout-utils.js";
+import { PageStrip } from "./PageStrip.js";
 import { Lobby } from "./Lobby.js";
 import { OrientedSurface, useContentFrame } from "./OrientedSurface.js";
 import { PhysicalGamepadPanel } from "./PhysicalGamepadPanel.js";
@@ -387,30 +388,53 @@ const InGame = ({
 
   return (
     <>
-      <header
-        className="flex items-center gap-2 border-b border-kp-border"
-        style={{ padding: "0.5rem 1rem" }}
-      >
-        <Identity me={me} isConnected={isConnected} />
-        <Button
-          size="small"
-          variant="ghost"
-          data-testid="open-menu"
-          disabled={menuVisible}
-          onClick={() => setMenuOpen(true)}
-        >
-          Menu
-        </Button>
-      </header>
-      {notice && (
-        <div
-          className="py-2 px-4 text-sm text-kp-accent-warning bg-kp-accent-warning/10"
-          data-testid="session-notice"
-        >
-          {notice}
-        </div>
+      {snapshot.config.chrome === "slim" ? (
+        <>
+          <PageStrip
+            config={snapshot.config}
+            currentSchemaId={me?.schemaId}
+            onSelectSchema={(schemaId) => send({ type: "select_schema", schemaId })}
+            menuDisabled={menuVisible}
+            onOpenMenu={() => setMenuOpen(true)}
+            driverText={driverText}
+          />
+          {notice && (
+            <div
+              className="py-2 px-4 text-sm text-kp-accent-warning bg-kp-accent-warning/10"
+              data-testid="session-notice"
+            >
+              {notice}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <header
+            className="flex items-center gap-2 border-b border-kp-border"
+            style={{ padding: "0.5rem 1rem" }}
+          >
+            <Identity me={me} isConnected={isConnected} />
+            <Button
+              size="small"
+              variant="ghost"
+              data-testid="open-menu"
+              disabled={menuVisible}
+              onClick={() => setMenuOpen(true)}
+            >
+              Menu
+            </Button>
+          </header>
+          {notice && (
+            <div
+              className="py-2 px-4 text-sm text-kp-accent-warning bg-kp-accent-warning/10"
+              data-testid="session-notice"
+            >
+              {notice}
+            </div>
+          )}
+          <DriverText text={driverText} />
+        </>
       )}
-      <DriverText text={driverText} />
       <div className="flex-1 flex flex-col relative min-h-0">
         <Controller
           // Remounted per schema: a switch mid-game must not keep sending the
