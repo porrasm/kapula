@@ -15,6 +15,7 @@ export {
   type KapulaPlayerConfig,
 } from "./config.js";
 export { createPlayerApi, usePlayerApi, type PlayerApi } from "./player-api.js";
+export { PhoneApp, type PhoneAppProps } from "./PhoneApp.js";
 export { PlayerHome, type PlayerHomeProps } from "./PlayerHome.js";
 export { JoinScreen } from "./JoinScreen.js";
 export { PlayerSession } from "./PlayerSession.js";

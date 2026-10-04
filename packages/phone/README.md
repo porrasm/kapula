@@ -14,6 +14,20 @@ import "@kapula/phone/kapula.css";
 </KapulaPlayerProvider>
 ```
 
+The one-liner, with [wouter](https://github.com/molefrog/wouter) routing:
+
+```tsx
+<KapulaPlayerProvider config={{ apiBase: "/api/kapula" }}>
+  <PhoneApp title="Kapula" header={<UserBadge />} landingExtra={<HostPanel />} />
+</KapulaPlayerProvider>
+```
+
+`PhoneApp` renders `/` (`PlayerHome` plus the optional `landingExtra`),
+`/join/:code` (prefilled join form) and `/play` (`PlayerSession`), keeps the
+stored player and handles leave and stale credentials. It needs `wouter` and
+`@tanstack/react-query` in the app (`wouter` is an optional peer dependency:
+only required if you use `PhoneApp`).
+
 Styling: the screens use `kp-*` Tailwind utilities. Add
 `@kapula/phone/tailwind-preset` to your Tailwind config's `presets` and the
 package's `dist/**/*.js` to its `content`; the colors are CSS variables in
