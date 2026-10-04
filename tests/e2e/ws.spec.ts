@@ -1,3 +1,4 @@
+import { TestDriver } from "./test-driver";
 import {
   test,
   expect,
@@ -2224,4 +2225,20 @@ test.describe("driver setup rate limiting", () => {
     const other = await driverSetup(request, "ZYXWVU");
     expect(other.status).toBe(404);
   });
+});
+
+
+test("Driver SDK sets up, folds the snapshot and sends session commands", async ({ request }) => {
+  await devLogin(request, uniqueEmail("sdk-driver"));
+  const { setupCode } = await createHostSession(request);
+  const setup = await TestDriver.setup(request, setupCode);
+  const driver = new TestDriver();
+  try {
+    await driver.connect(setup.wsUrl);
+    const snapshot = await driver.waitFor(msg => msg.type === "snapshot");
+    expect(snapshot.snapshot).toMatchObject({ sessionId: setup.sessionId, protocolVersion: 2, players: [] });
+    driver.send({ type: "end" });
+    expect(await driver.waitFor(msg => msg.type === "state_changed" && msg.state === "ended"))
+      .toMatchObject({ reason: "driver_command" });
+  } finally { driver.close(); }
 });

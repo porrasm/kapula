@@ -1287,3 +1287,12 @@ there rather than here.
   changes. Only the gravity-referenced tilt axes (beta/gamma) are used: yaw
   needs the compass, drifts, and was cut on purpose; revisit only with a
   proper sensor-fusion story.
+
+### Driver SDK
+
+[`@kapula/driver`](../packages/driver/README.md) wraps the driver setup/create
+and background HTTP APIs and exposes a typed WebSocket client for Node and
+browsers. It maintains a snapshot-authoritative player map, deduplicates input
+sequences across reconnects, reconnects transient closures with backoff, and
+sends application pings. The package README contains a complete setup example
+and documents its commands, events, injection options, and disposal behavior.

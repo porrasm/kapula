@@ -1,31 +1,18 @@
+import { setupDriver, connectDriver, type DriverConnection, type DriverConfig } from "@kapula/driver";
+import type { KapulaDriverClientMessage, KapulaDriverSetupResponse } from "@kapula/protocol";
 import type { APIRequestContext } from "@playwright/test";
 import { HOST_URL } from "../../playwright.config";
 
-type SetupResponse = {
-  success: boolean;
-  error?: string;
-  sessionId: string;
-  joinCode: string;
-  joinUrl: string;
-  driverToken: string;
-  wsPath: string;
-  /** The driver socket as an absolute URL; what a real driver connects to. */
-  wsUrl: string;
-  protocolVersion: number;
-  /** The host's session metadata, verbatim; absent when none was set. */
-  metadata?: string;
-};
+type SetupResponse = KapulaDriverSetupResponse;
 
 type ServerMessage = { type: string } & Record<string, unknown>;
 
 /**
- * Minimal driver client for the tests: what a real game would implement
- * against the documented HTTP + WebSocket protocol. Runs in the Playwright
- * Node process using the built-in WebSocket (Node 22+).
+ * Thin SDK adapter retaining the tests' message history and waitFor API.
  */
 export class TestDriver {
   readonly messages: ServerMessage[] = [];
-  private ws: WebSocket | null = null;
+  private ws: DriverConnection | null = null;
   private waiters: {
     pred: (msg: ServerMessage) => boolean;
     resolve: (msg: ServerMessage) => void;
@@ -36,18 +23,17 @@ export class TestDriver {
     setupCode: string,
     config?: unknown,
   ): Promise<SetupResponse> {
-    const response = await request.post("/api/kapula/driver/setup", {
-      // A unique dev-only rate-limit bucket per call: every test run shares
-      // localhost and the dev backend keeps its 10/min window across runs,
-      // so unscoped calls would throttle unrelated tests and repeat runs.
-      headers: { "x-kapula-ratelimit-key": crypto.randomUUID() },
-      data: { setupCode, ...(config !== undefined ? { config } : {}) },
+    return setupDriver(`${HOST_URL}/api/kapula`, {
+      setupCode,
+      config: config as DriverConfig | undefined,
+      fetch: async (url, init) => {
+        const response = await request.post(String(url), {
+          headers: { ...init?.headers as Record<string, string>, "x-kapula-ratelimit-key": crypto.randomUUID() },
+          data: JSON.parse(String(init?.body)),
+        });
+        return new Response(await response.text(), { status: response.status(), headers: response.headers() });
+      },
     });
-    const body = (await response.json()) as SetupResponse;
-    if (!body.success) {
-      throw new Error(`Driver setup failed: ${body.error}`);
-    }
-    return body;
   }
 
   /** Takes the setup response's `wsUrl` (absolute) or its `wsPath`. */
@@ -55,31 +41,22 @@ export class TestDriver {
     const url = /^wss?:\/\//.test(target)
       ? target
       : HOST_URL.replace(/^http/, "ws") + target;
-    const ws = new WebSocket(url);
+    const ws = connectDriver({ wsUrl: url, token: new URL(url).searchParams.get("token") ?? "" });
     this.ws = ws;
-    ws.addEventListener("message", (ev) => {
-      try {
-        const msg = JSON.parse(String(ev.data)) as ServerMessage;
-        this.messages.push(msg);
-        this.waiters = this.waiters.filter((waiter) => {
-          if (!waiter.pred(msg)) return true;
-          waiter.resolve(msg);
-          return false;
-        });
-      } catch {
-        /* ignore */
-      }
-    });
-    await new Promise<void>((resolve, reject) => {
-      ws.addEventListener("open", () => resolve(), { once: true });
-      ws.addEventListener("error", () => reject(new Error("WS failed")), {
-        once: true,
+    ws.on("message", (message) => {
+      const msg = message as ServerMessage;
+      this.messages.push(msg);
+      this.waiters = this.waiters.filter((waiter) => {
+        if (!waiter.pred(msg)) return true;
+        waiter.resolve(msg);
+        return false;
       });
     });
+    await ws.ready;
   }
 
-  send(msg: Record<string, unknown>) {
-    this.ws?.send(JSON.stringify(msg));
+  send(msg: KapulaDriverClientMessage) {
+    this.ws?.send(msg);
   }
 
   /** Resolves with the first past or future message matching the predicate. */

@@ -9,11 +9,12 @@
     "packages/protocol",
     "packages/server",
     "packages/phone",
+    "packages/driver",
     "apps/host"
   ],
   "scripts": {
     "build": "npm run build:packages && npm run build --workspace=apps/host",
-    "build:packages": "tsc -b packages/protocol packages/server packages/phone && npm run copy-assets --workspace=packages/phone",
+    "build:packages": "tsc -b packages/protocol packages/server packages/phone packages/driver && npm run copy-assets --workspace=packages/phone",
     "typecheck": "npm run build:packages && tsc --noEmit -p apps/host && tsc --noEmit -p tests",
     "dev": "npm run build:packages && npm run dev --workspace=apps/host",
     "start": "npm run start --workspace=apps/host",
