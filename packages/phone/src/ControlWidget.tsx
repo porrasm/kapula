@@ -2,6 +2,7 @@ import type { KapulaInputValue } from "@kapula/protocol";
 import { roundAxis } from "./axis-utils.js";
 import { Dpad } from "./Dpad.js";
 import { Fader } from "./Fader.js";
+import { Knob } from "./Knob.js";
 import { Joystick } from "./Joystick.js";
 import { RawTouchSurface } from "./RawTouchSurface.js";
 import type { ControlBox } from "./layout-override.js";
@@ -78,6 +79,26 @@ export const ControlWidget = ({
           height={resolved.height}
           axis={control.axis}
           spring={control.spring}
+          defaultValue={control.default}
+          label={control.label}
+          testId={`control-${control.id}`}
+          disabled={disabled}
+          onChange={(value, released) =>
+            setControl(control.id, roundAxis(value), released)
+          }
+        />
+      </div>
+    );
+  }
+  if (control.type === "knob") {
+    return (
+      <div
+        className={`absolute${inertClass}`}
+        style={controlBoxStyle(resolved)}
+      >
+        <Knob
+          size={Math.min(resolved.width, resolved.height)}
+          mode={control.mode}
           defaultValue={control.default}
           label={control.label}
           testId={`control-${control.id}`}

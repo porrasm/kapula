@@ -172,6 +172,9 @@ any active state ──driver end / host end / driver away 3 min / 24h idle─�
           { "type": "fader", "id": "expr",  // a track + cap that stays put;
             "axis": "v", "spring": false,  // "v"|"h", spring back on release
             "default": 0 },         // start/spring value 0..1 (see "Faders")
+          { "type": "knob", "id": "cutoff",  // a rotary knob dragged
+            "mode": "absolute",     // vertically; "absolute"|"endless"
+            "default": 0 },         // (see "Knobs")
           { "type": "button", "id": "fire", "label": "Fire", "zone": "right",
             "shape": "rect" },      // optional "round" (default) | "rect"
           { "type": "button", "id": "jump", "label": "Jump",
@@ -545,6 +548,29 @@ slot like a joystick and the layout editor moves it like any box.
 - **Dragging is relative:** the value follows the drag from where the finger
   landed, so touching the track does not make the cap jump. Movement is
   throttled like a stick (~30 fps); release is sent immediately.
+
+### Knobs
+
+A `knob` is a round rotary control. Fields: `mode` (`"absolute"` default, or
+`"endless"`), `default` (0..1, default 0; absolute only), plus the usual
+`label`, `zone`, `size`, `x`, `y`. It is placed in a stick slot like a
+joystick, drawn square and 0.7× a stick's size (`size` hints apply).
+
+- **Gesture:** a vertical drag anywhere on the knob, up = clockwise. The drag
+  is relative (no jump on touch-down), the knob captures the pointer so the
+  finger may leave it, and the travel is `KNOB_TRAVEL_PX` = 150 px: full
+  range for `absolute`, one turn for `endless`.
+- **`absolute`:** the wire value is a bare number in [0, 1], rounded to three
+  decimals, clamped at both ends and kept on release. The arc runs 270° from
+  7 o'clock to 5 o'clock and the value is shown inside the ring. The first
+  frame after the controller appears reports `default`.
+- **`endless`:** the wire value is the **cumulative rotation in turns** as a
+  bare float with three decimals — unbounded, possibly negative, 0 when the
+  controller appears (it is not clamped, and `default` is ignored). It is
+  cumulative rather than a delta so a dropped or coalesced frame loses
+  nothing: the driver computes `turns - previousTurns` between consecutive
+  values it sees. Because it is unbounded, input frames accept any finite
+  bare number, not only [-1, 1].
 
 ### Physical gamepads
 

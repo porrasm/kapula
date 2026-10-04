@@ -157,7 +157,8 @@ const zoneOf = (control: KapulaControl): KapulaControlZone | undefined =>
 const isStickLike = (control: KapulaControl): boolean =>
   control.type === "joystick" ||
   control.type === "touchpad" ||
-  control.type === "fader";
+  control.type === "fader" ||
+  control.type === "knob";
 
 /**
  * Controls the engine places as buttons: buttons, and `text` controls,
@@ -169,8 +170,16 @@ const isButtonLike = (control: KapulaControl): boolean =>
 /** A touchpad is drawn bigger than a stick of the same slot and hint. */
 const TOUCHPAD_SCALE = 1.3;
 
+/** A knob is drawn smaller than a stick of the same slot and hint. */
+const KNOB_SCALE = 0.7;
+
 const stickScale = (control: KapulaControl): number =>
-  sizeFactor(control) * (control.type === "touchpad" ? TOUCHPAD_SCALE : 1);
+  sizeFactor(control) *
+  (control.type === "touchpad"
+    ? TOUCHPAD_SCALE
+    : control.type === "knob"
+      ? KNOB_SCALE
+      : 1);
 
 export type OrientationLock = "landscape" | "portrait" | null;
 

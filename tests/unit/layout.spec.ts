@@ -901,3 +901,39 @@ test.describe("fader controls", () => {
     expect(large.height).toBeGreaterThan(small.height);
   });
 });
+
+test.describe("knob controls", () => {
+  const find = (extra: object = {}, other: object[] = []) =>
+    resolveLayout(
+      controlSchemaSchema.parse({
+        id: "knobs",
+        name: "Knobs",
+        controls: [{ type: "knob", id: "k", ...extra }, ...other],
+      }),
+      { width: 844, height: 390 },
+    ).controls.find((c) => c.control.id === "k")!;
+
+  test("a knob is a square in a stick slot, smaller than a stick", () => {
+    const k = find({}, [{ type: "joystick", id: "j" }]);
+    const j = resolveLayout(
+      controlSchemaSchema.parse({
+        id: "j",
+        name: "J",
+        controls: [
+          { type: "knob", id: "k" },
+          { type: "joystick", id: "j" },
+        ],
+      }),
+      { width: 844, height: 390 },
+    ).controls.find((c) => c.control.id === "j")!;
+    expect(k.role).toBe("stick");
+    expect(k.width).toBe(k.height);
+    expect(k.width / j.width).toBeCloseTo(0.7, 1);
+  });
+
+  test("size hints scale the knob", () => {
+    expect(find({ size: "large" }).width).toBeGreaterThan(
+      find({ size: "small" }).width,
+    );
+  });
+});

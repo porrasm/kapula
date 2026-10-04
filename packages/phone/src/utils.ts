@@ -8,6 +8,7 @@ export * from "./axis-utils.js";
 export * from "./debug-utils.js";
 export * from "./driver-payload.js";
 export * from "./fader-utils.js";
+export * from "./knob-utils.js";
 export * from "./gyro-utils.js";
 export * from "./layout-override.js";
 export * from "./layout-utils.js";

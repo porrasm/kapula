@@ -215,6 +215,34 @@ export const kapulaFaderControlSchema = z.object({
   y: kapulaControlPositionSchema.optional(),
 });
 
+/** How a knob reports: a position in [0, 1], or cumulative turns. */
+export const kapulaKnobModeSchema = z.enum(["absolute", "endless"]);
+export type KapulaKnobMode = z.infer<typeof kapulaKnobModeSchema>;
+
+/**
+ * A rotary knob, dragged vertically (up = clockwise).
+ *
+ * - `mode: "absolute"` (default): reports a bare number in [0, 1], rounded to
+ *   three decimals; the arc spans 270° and the value is kept on release. The
+ *   first frame after the controller appears reports `default`.
+ * - `mode: "endless"`: reports the cumulative rotation in turns as a bare
+ *   float (three decimals, unbounded, may be negative, 0 when the controller
+ *   appears; `default` is ignored). Cumulative rather than deltas so a dropped
+ *   or coalesced frame loses nothing: the driver differences consecutive
+ *   values.
+ */
+export const kapulaKnobControlSchema = z.object({
+  type: z.literal("knob"),
+  id: idSchema,
+  label: z.string().min(1).max(16).optional(),
+  mode: kapulaKnobModeSchema.default("absolute"),
+  default: z.number().min(0).max(1).default(0),
+  zone: kapulaControlZoneSchema.optional(),
+  size: kapulaControlSizeSchema.optional(),
+  x: kapulaControlPositionSchema.optional(),
+  y: kapulaControlPositionSchema.optional(),
+});
+
 /**
  * What a gyro reports (all axes derived from device tilt only — beta/gamma,
  * i.e. pitch and roll; yaw needs the compass and drifts, so it is
@@ -337,6 +365,7 @@ export const kapulaControlSchema = z.discriminatedUnion("type", [
   kapulaButtonControlSchema,
   kapulaJoystickControlSchema,
   kapulaFaderControlSchema,
+  kapulaKnobControlSchema,
   kapulaGyroControlSchema,
   kapulaMotionControlSchema,
   kapulaRawControlSchema,
@@ -346,6 +375,7 @@ export const kapulaControlSchema = z.discriminatedUnion("type", [
 export type KapulaControl = z.infer<typeof kapulaControlSchema>;
 export type KapulaTouchpadControl = z.infer<typeof kapulaTouchpadControlSchema>;
 export type KapulaTextControl = z.infer<typeof kapulaTextControlSchema>;
+export type KapulaKnobControl = z.infer<typeof kapulaKnobControlSchema>;
 export type KapulaFaderControl = z.infer<typeof kapulaFaderControlSchema>;
 export type KapulaGyroControl = z.infer<typeof kapulaGyroControlSchema>;
 export type KapulaMotionControl = z.infer<typeof kapulaMotionControlSchema>;
@@ -914,7 +944,8 @@ export type KapulaRawTouch = z.infer<typeof kapulaRawTouchSchema>;
  * single-axis: `{x}` / `{y}` (all axes normalized to [-1, 1]), dpad: a
  * direction string. A bare number is an analog scalar in [-1, 1] — a
  * physical gamepad's triggers (0 = released, 1 = pulled) and a `fader`
- * (position in [0, 1]) send one.
+ * (position in [0, 1]) send one; an `endless` knob sends cumulative turns,
+ * which is unbounded.
  * An array is a `raw` or `touchpad` control's fingers (empty when nothing
  * touches).
  */
@@ -926,7 +957,9 @@ export const kapulaInputValueSchema = z.union([
   z.strictObject({ x: axisSchema }),
   z.strictObject({ y: axisSchema }),
   kapulaDpadDirectionSchema,
-  axisSchema,
+  // Bare numbers: triggers, faders and absolute knobs stay in [-1, 1], but an
+  // endless knob's cumulative turns are unbounded.
+  z.number().finite(),
   z.array(kapulaRawTouchSchema).max(KAPULA_RAW_MAX_TOUCHES),
 ]);
 export type KapulaInputValue = z.infer<typeof kapulaInputValueSchema>;

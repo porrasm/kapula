@@ -692,15 +692,18 @@ test.describe("physical gamepads", () => {
     expect(PHYSICAL_GAMEPAD_CONTROLS.filter((c) => c.kind === "trigger")).toHaveLength(2);
   });
 
-  test("trigger values are analog scalars in [-1, 1]", () => {
+  test("trigger values are analog scalars", () => {
     const frame = kapulaInputFrameSchema.parse({
       seq: 1,
       controls: { lt: 0, rt: 0.75, a: true, dpad: "c" },
     });
     expect(frame.controls["rt"]).toBe(0.75);
-    expect(() =>
-      kapulaInputFrameSchema.parse({ seq: 1, controls: { rt: 1.5 } }),
-    ).toThrow();
+    // Bare numbers are unbounded since endless knobs (cumulative turns).
+    expect(
+      kapulaInputFrameSchema.parse({ seq: 1, controls: { rt: 1.5 } }).controls[
+        "rt"
+      ],
+    ).toBe(1.5);
     expect(() =>
       kapulaInputFrameSchema.parse({ seq: 1, controls: { rt: Number.NaN } }),
     ).toThrow();
@@ -818,5 +821,42 @@ test.describe("fader control", () => {
           .success,
       ).toBe(false);
     }
+  });
+});
+
+test.describe("knob control", () => {
+  test("accepts absolute and endless knobs with defaults", async () => {
+    const { kapulaControlSchema } = await import("@kapula/protocol");
+    expect(kapulaControlSchema.parse({ type: "knob", id: "cutoff" })).toEqual({
+      type: "knob",
+      id: "cutoff",
+      mode: "absolute",
+      default: 0,
+    });
+    expect(
+      kapulaControlSchema.parse({ type: "knob", id: "jog", mode: "endless" }),
+    ).toMatchObject({ mode: "endless" });
+  });
+
+  test("rejects an unknown mode and a bad default", async () => {
+    const { kapulaControlSchema } = await import("@kapula/protocol");
+    for (const bad of [{ mode: "spin" }, { default: 1.5 }, { default: -1 }]) {
+      expect(
+        kapulaControlSchema.safeParse({ type: "knob", id: "k", ...bad })
+          .success,
+      ).toBe(false);
+    }
+  });
+
+  test("input frames carry unbounded endless turns", async () => {
+    const { kapulaInputFrameSchema } = await import("@kapula/protocol");
+    expect(
+      kapulaInputFrameSchema.safeParse({ seq: 1, controls: { jog: -7.25 } })
+        .success,
+    ).toBe(true);
+    expect(
+      kapulaInputFrameSchema.safeParse({ seq: 1, controls: { jog: 12.5 } })
+        .success,
+    ).toBe(true);
   });
 });
