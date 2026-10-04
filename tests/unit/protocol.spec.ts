@@ -867,3 +867,40 @@ test.describe("knob control", () => {
     ).toBe(true);
   });
 });
+
+test.describe("exact control geometry", () => {
+  const button = (i: number, extra: object = {}) => ({
+    type: "button" as const,
+    id: `b${i}`,
+    label: "B",
+    ...extra,
+  });
+  const schema = (controls: object[]) =>
+    controlSchemaSchema.safeParse({ id: "s", name: "S", controls });
+
+  test("accepts 64 controls and rejects 65", () => {
+    expect(schema(Array.from({ length: 64 }, (_, i) => button(i))).success).toBe(true);
+    expect(schema(Array.from({ length: 65 }, (_, i) => button(i))).success).toBe(false);
+  });
+
+  test("w and h are 0.5-100 on every laid-out type", () => {
+    const types = [
+      { type: "button", label: "B" },
+      { type: "joystick" },
+      { type: "touchpad" },
+      { type: "text" },
+      { type: "fader" },
+      { type: "knob" },
+    ];
+    for (const t of types) {
+      const ok = (extra: object) => schema([{ ...t, id: "c", ...extra }]).success;
+      expect(ok({ w: 0.5, h: 100 })).toBe(true);
+      expect(ok({ w: 20 })).toBe(true);
+      expect(ok({ w: 0.4 })).toBe(false);
+      expect(ok({ h: 100.1 })).toBe(false);
+      expect(ok({ color: "#ff8800" })).toBe(true);
+      expect(ok({ color: "orange" })).toBe(false);
+      expect(ok({ color: "#fff" })).toBe(false);
+    }
+  });
+});

@@ -4,6 +4,7 @@ import {
   RELATIVE_STICK_TRAVEL,
   applyDriverPositions,
   hasDriverPosition,
+  isExactSchema,
   needsLandscape,
   orientationLock,
   pointToDpadDirection,
@@ -935,5 +936,92 @@ test.describe("knob controls", () => {
     expect(find({ size: "large" }).width).toBeGreaterThan(
       find({ size: "small" }).width,
     );
+  });
+});
+
+test.describe("exact layout", () => {
+  const VIEWPORT = { width: 568, height: 320 };
+  // 8 columns x 5 rows of faders / knobs / buttons, all positioned and sized.
+  const mixer = (): ControlSchema => ({
+    id: "mixer",
+    name: "Mixer",
+    orientation: "landscape",
+    controls: Array.from({ length: 40 }, (_, i) => {
+      const col = i % 8;
+      const row = Math.floor(i / 8);
+      const base = {
+        id: `c${i}`,
+        x: 6 + col * 12.5,
+        y: 10 + row * 20,
+        w: 10,
+        h: 16,
+        color: "#33aaff",
+      };
+      return i % 3 === 0
+        ? { type: "fader" as const, axis: "v" as const, default: 0, ...base }
+        : i % 3 === 1
+          ? { type: "knob" as const, mode: "absolute" as const, default: 0, ...base }
+          : { type: "button" as const, label: "B", ...base };
+    }),
+  } as ControlSchema);
+
+  test("a fully positioned schema resolves exact, with the given sizes", () => {
+    const schema = mixer();
+    expect(isExactSchema(schema)).toBe(true);
+    const layout = resolveLayout(schema, VIEWPORT);
+    expect(layout.exact).toBe(true);
+    expect(layout.controls).toHaveLength(40);
+    for (const r of layout.controls) {
+      expect(r.width).toBeCloseTo(56.8, 0);
+      expect(r.height).toBeCloseTo(51.2, 0);
+      expect(r.x - r.width / 2).toBeGreaterThanOrEqual(-0.001);
+      expect(r.y - r.height / 2).toBeGreaterThanOrEqual(-0.001);
+      expect(r.x + r.width / 2).toBeLessThanOrEqual(VIEWPORT.width + 0.001);
+      expect(r.y + r.height / 2).toBeLessThanOrEqual(VIEWPORT.height + 0.001);
+    }
+    const c9 = layout.controls.find((r) => r.control.id === "c9")!;
+    expect(c9.x).toBeCloseTo(((6 + 12.5) / 100) * 568, 0);
+    expect(c9.y).toBeCloseTo(0.3 * 320, 0);
+  });
+
+  test("a missing w / h keeps the engine's size; tiny sizes are floored and edges clamped", () => {
+    const draft = resolveLayout(
+      { id: "s", name: "S", orientation: "landscape", controls: [{ type: "button", id: "a", label: "A" }] },
+      VIEWPORT,
+    ).controls[0];
+    const layout = resolveLayout(
+      {
+        id: "s",
+        name: "S",
+        orientation: "landscape",
+        controls: [
+          { type: "button", id: "a", label: "A", x: 100, y: 0, w: 0.5 },
+        ],
+      },
+      VIEWPORT,
+    );
+    const a = layout.controls[0];
+    expect(layout.exact).toBe(true);
+    expect(a.height).toBeCloseTo(draft.height, 5);
+    expect(a.width).toBe(36);
+    expect(a.x + a.width / 2).toBeCloseTo(VIEWPORT.width, 5);
+    expect(a.y - a.height / 2).toBeCloseTo(0, 5);
+  });
+
+  test("exact schemas only need landscape when they say so", () => {
+    const schema = mixer();
+    expect(needsLandscape(schema)).toBe(true);
+    expect(needsLandscape({ ...schema, orientation: "auto" })).toBe(false);
+  });
+
+  test("a schema where one control lacks x / y still uses the zone engine", () => {
+    const schema = mixer();
+    const { x: _x, y: _y, ...bare } = schema.controls[0] as Record<string, unknown>;
+    schema.controls[0] = bare as ControlSchema["controls"][number];
+    expect(isExactSchema(schema)).toBe(false);
+    const layout = resolveLayout(schema, VIEWPORT);
+    expect(layout.exact).toBeUndefined();
+    // Positioned controls keep the engine's size, not w / h.
+    expect(layout.controls.find((r) => r.control.id === "c1")!.width).not.toBeCloseTo(56.8, 0);
   });
 });

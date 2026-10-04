@@ -119,6 +119,9 @@ export type KapulaControlZone = z.infer<typeof kapulaControlZoneSchema>;
 export const kapulaControlSizeSchema = z.enum(["small", "medium", "large"]);
 export type KapulaControlSize = z.infer<typeof kapulaControlSizeSchema>;
 
+/** Most controls one schema may hold. */
+export const KAPULA_MAX_CONTROLS = 64;
+
 /**
  * Exact placement — the one hint that is geometry: the control's center as
  * a percentage (0–100) of the controller box's width (`x`, from the left
@@ -131,6 +134,24 @@ export type KapulaControlSize = z.infer<typeof kapulaControlSizeSchema>;
  * `disallowLayoutCustomization`.
  */
 export const kapulaControlPositionSchema = z.number().min(0).max(100);
+
+/**
+ * Exact size — `w` / `h` on a laid-out control: its width / height as a
+ * percentage (0.5–100) of the controller box's width / height. Both are
+ * optional and independent; a control with only `w` keeps the engine's
+ * height. They take effect when every control in the schema has `x` and `y`
+ * ("exact" layout); in mixed schemas the engine still sizes the controls.
+ */
+export const kapulaControlExtentSchema = z.number().min(0.5).max(100);
+
+/**
+ * A control's accent as `#RRGGBB` (fader fill, knob arc, lit button, pad
+ * hit). The phone sets it as a CSS variable on the control box, so the
+ * kp-* theme classes stay.
+ */
+export const kapulaControlColorSchema = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, "Colors must be #RRGGBB hex");
 
 /**
  * A button's outline: "round" (default — a circle under a thumb, a pill on
@@ -148,6 +169,9 @@ export const kapulaButtonControlSchema = z.object({
   size: kapulaControlSizeSchema.optional(),
   x: kapulaControlPositionSchema.optional(),
   y: kapulaControlPositionSchema.optional(),
+  w: kapulaControlExtentSchema.optional(),
+  h: kapulaControlExtentSchema.optional(),
+  color: kapulaControlColorSchema.optional(),
   shape: kapulaButtonShapeSchema.optional(),
   /**
    * "momentary" (default): true while held. "toggle": each tap (pointerup
@@ -195,6 +219,9 @@ export const kapulaJoystickControlSchema = z.object({
   size: kapulaControlSizeSchema.optional(),
   x: kapulaControlPositionSchema.optional(),
   y: kapulaControlPositionSchema.optional(),
+  w: kapulaControlExtentSchema.optional(),
+  h: kapulaControlExtentSchema.optional(),
+  color: kapulaControlColorSchema.optional(),
 });
 
 /**
@@ -227,6 +254,9 @@ export const kapulaFaderControlSchema = z.object({
   size: kapulaControlSizeSchema.optional(),
   x: kapulaControlPositionSchema.optional(),
   y: kapulaControlPositionSchema.optional(),
+  w: kapulaControlExtentSchema.optional(),
+  h: kapulaControlExtentSchema.optional(),
+  color: kapulaControlColorSchema.optional(),
 });
 
 /** How a knob reports: a position in [0, 1], or cumulative turns. */
@@ -255,6 +285,9 @@ export const kapulaKnobControlSchema = z.object({
   size: kapulaControlSizeSchema.optional(),
   x: kapulaControlPositionSchema.optional(),
   y: kapulaControlPositionSchema.optional(),
+  w: kapulaControlExtentSchema.optional(),
+  h: kapulaControlExtentSchema.optional(),
+  color: kapulaControlColorSchema.optional(),
 });
 
 /**
@@ -347,6 +380,9 @@ export const kapulaTouchpadControlSchema = z.object({
   size: kapulaControlSizeSchema.optional(),
   x: kapulaControlPositionSchema.optional(),
   y: kapulaControlPositionSchema.optional(),
+  w: kapulaControlExtentSchema.optional(),
+  h: kapulaControlExtentSchema.optional(),
+  color: kapulaControlColorSchema.optional(),
 });
 
 /** Longest text a `text` control sends (and its `maxLength` ceiling). */
@@ -372,6 +408,9 @@ export const kapulaTextControlSchema = z.object({
   size: kapulaControlSizeSchema.optional(),
   x: kapulaControlPositionSchema.optional(),
   y: kapulaControlPositionSchema.optional(),
+  w: kapulaControlExtentSchema.optional(),
+  h: kapulaControlExtentSchema.optional(),
+  color: kapulaControlColorSchema.optional(),
   shape: kapulaButtonShapeSchema.optional(),
 });
 
@@ -415,7 +454,7 @@ export const controlSchemaSchema = z
     id: idSchema,
     name: z.string().min(1).max(32),
     orientation: kapulaOrientationSchema.default("auto"),
-    controls: z.array(kapulaControlSchema).min(1).max(16),
+    controls: z.array(kapulaControlSchema).min(1).max(KAPULA_MAX_CONTROLS),
   })
   .superRefine((schema, ctx) => {
     const ids = new Set<string>();

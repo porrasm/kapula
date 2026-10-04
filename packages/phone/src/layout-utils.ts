@@ -7,12 +7,16 @@ import type {
   KapulaMotionControl,
   KapulaRawControl,
 } from "@kapula/protocol";
+import { MIN_CONTROL_SIZE } from "./layout-override.js";
 
 /**
  * Pure controller-layout engine: assigns every control of a schema to an
  * ergonomic thumb zone and returns pixel geometry for a given viewport.
  * Kept free of React and the DOM so unit tests can assert real geometry
  * (bounds, overlaps) directly.
+ *
+ * Exception — exact mode: when every laid-out control has `x` and `y`, none
+ * of the below applies; see `isExactSchema` / `exactLayout`.
  *
  * Three inputs decide where a control goes (see KAPULA.md):
  * - Optional driver positions: per-control `x` / `y`, the center as a
@@ -58,6 +62,12 @@ export type ResolvedControl = {
 
 export type ResolvedLayout = {
   mode: "landscape" | "one-hand";
+  /**
+   * True when every control carried `x` and `y`, so the zone engine was
+   * skipped: each control sits at its own position and size (`w` / `h`,
+   * else the engine's size for its type).
+   */
+  exact?: boolean;
   controls: ResolvedControl[];
 };
 
@@ -199,7 +209,22 @@ export const orientationLock = (schema: ControlSchema): OrientationLock => {
 
 /** Big schemas need two thumbs; small ones also work one-handed in portrait. */
 export const needsLandscape = (schema: ControlSchema): boolean =>
-  orientationLock(schema) === "landscape";
+  isExactSchema(schema)
+    ? schema.orientation === "landscape"
+    : orientationLock(schema) === "landscape";
+
+/**
+ * Whether the driver positioned every laid-out control (`x` and `y` on
+ * each; sensors and `raw` need none). Such a schema resolves in "exact"
+ * mode. A schema with nothing laid out is not exact.
+ */
+export const isExactSchema = (schema: ControlSchema): boolean => {
+  const laidOut = schema.controls.filter((c) => !isSensor(c));
+  return (
+    laidOut.length > 0 &&
+    laidOut.every((c) => c.x !== undefined && c.y !== undefined)
+  );
+};
 
 /**
  * Single-axis sticks render as pill tracks along their axis (never smaller
@@ -233,15 +258,53 @@ export const resolveLayout = (
   schema: ControlSchema,
   viewport: Viewport,
 ): ResolvedLayout => {
-  const lock = orientationLock(schema);
+  const exact = isExactSchema(schema);
+  const lock = exact
+    ? schema.orientation === "landscape" || schema.orientation === "portrait"
+      ? schema.orientation
+      : null
+    : orientationLock(schema);
   const oneHand =
     lock === "portrait" ||
     (lock === null && viewport.height > viewport.width);
   const draft = oneHand
     ? oneHandLayout(schema, viewport)
     : landscapeLayout(schema, viewport);
-  return applyDriverPositions(draft, viewport);
+  return exact ? exactLayout(draft, viewport) : applyDriverPositions(draft, viewport);
 };
+
+/**
+ * Exact mode: every control keeps its own `x` / `y` / `w` / `h` (percent of
+ * the viewport). A missing `w` / `h` falls back to the engine's size for
+ * that control (taken from the draft, whose zone assignment is otherwise
+ * ignored). Sizes are floored at the minimum control size and capped to the
+ * viewport, and the box is clamped on-screen. No overlap resolution.
+ */
+const exactLayout = (draft: ResolvedLayout, { width, height }: Viewport): ResolvedLayout => ({
+  mode: draft.mode,
+  exact: true,
+  controls: draft.controls.map((resolved) => {
+    const { control } = resolved;
+    if (isSensor(control)) return resolved;
+    const w = clamp(
+      control.w === undefined ? resolved.width : (control.w / 100) * width,
+      Math.min(MIN_CONTROL_SIZE, width),
+      width,
+    );
+    const h = clamp(
+      control.h === undefined ? resolved.height : (control.h / 100) * height,
+      Math.min(MIN_CONTROL_SIZE, height),
+      height,
+    );
+    return {
+      ...resolved,
+      width: w,
+      height: h,
+      x: clamp(((control.x ?? 0) / 100) * width, w / 2, width - w / 2),
+      y: clamp(((control.y ?? 0) / 100) * height, h / 2, height - h / 2),
+    };
+  }),
+});
 
 /**
  * Whether the player may edit this schema's layout: not when the driver

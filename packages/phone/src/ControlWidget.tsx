@@ -1,5 +1,5 @@
-import { useState } from "react";
-import type { KapulaInputValue } from "@kapula/protocol";
+import { useState, type CSSProperties } from "react";
+import type { KapulaControl, KapulaInputValue } from "@kapula/protocol";
 import { roundAxis } from "./axis-utils.js";
 import { toggleNext } from "./control-state.js";
 import { Dpad } from "./Dpad.js";
@@ -265,12 +265,29 @@ const axisValue = (
 };
 
 /** CSS box for a control: the engine hands out centers, CSS wants corners. */
-export const controlBoxStyle = (box: ControlBox) => ({
+export const controlBoxStyle = (
+  box: ControlBox & { control?: KapulaControl },
+): CSSProperties => ({
   left: Math.round(box.x - box.width / 2),
   top: Math.round(box.y - box.height / 2),
   width: Math.round(box.width),
   height: Math.round(box.height),
+  ...accentStyle(box.control),
 });
+
+/**
+ * The control's `color` as the accent variable on its box (an `R G B`
+ * triplet, like the theme's own), so every kp-accent-primary class inside
+ * the control picks it up without new classes.
+ */
+export const accentStyle = (control?: KapulaControl): CSSProperties => {
+  const color = control && "color" in control ? control.color : undefined;
+  if (!color) return {};
+  const n = parseInt(color.slice(1), 16);
+  return {
+    ["--kp-accent-primary" as string]: `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`,
+  };
+};
 
 const buttonClasses = (resolved: ResolvedControl): string => {
   if (resolved.role === "shoulder") return "border-2 text-sm";

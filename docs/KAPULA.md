@@ -162,7 +162,7 @@ any active state ──driver end / host end / driver away 3 min / 24h idle─�
         "name": "Tank",
         "orientation": "auto",      // optional layout hint: "auto" (default)
                                     // | "landscape" | "portrait"
-        "controls": [               // 1–16 controls, unique kebab-case ids,
+        "controls": [               // 1–64 controls, unique kebab-case ids,
                                     // ordered most-important-first (see
                                     // "Controller layout" below)
           { "type": "joystick", "id": "drive",    // mode "full" (x+y) default
@@ -793,7 +793,27 @@ past it. The two axes are independent — an axis left out keeps the engine's
 placement for that axis, so a driver can pin a row's height and let the
 engine spread it.
 
-What positions do **not** decide is size and shape: the engine still sizes
+**Exact mode.** When *every* laid-out control in a schema has both `x` and
+`y`, the engine skips zone assignment entirely (`resolveLayout` returns
+`exact: true`): no thumb zones, no overlap resolution, no orientation
+heuristic. Each control gets its own position and size. Sizes come from the
+optional **`w`** and **`h`** (0.5–100, percent of the controller box's width
+and height) on button, joystick, touchpad, text, fader and knob; the two are
+independent, so a control with only `w` keeps the engine's height for its
+type. Boxes are floored at `MIN_CONTROL_SIZE` (36 px) and clamped into the
+viewport. In exact mode `needsLandscape` is true only when the schema says
+`orientation: "landscape"` (the control-count heuristic is off), so set
+`orientation` to the box the percentages are meant for. A schema where even
+one laid-out control lacks `x` or `y` is *mixed* and behaves as described
+below (positions applied after the thumb-zone draft; `w` / `h` are ignored).
+The raised cap — up to **64 controls** per schema — exists for panels like
+mixers.
+
+**`color`** (`"#RRGGBB"`, same laid-out types) sets a control's accent: fader
+fill, knob arc, lit button, pad hit. The phone writes it into the control
+box's `--kp-accent-primary` variable, so the `kp-*` theme classes stay.
+
+What positions do **not** decide in a mixed schema is size and shape: the engine still sizes
 every control from its zone and `size` hint (a `"shoulder-*"` button is still
 a pill, an `"aux"` one a small pill, a thumb-zone button a round primary),
 and a positioned control still takes its slot in the engine's flow for the

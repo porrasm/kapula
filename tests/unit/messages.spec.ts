@@ -220,12 +220,12 @@ test.describe("session config boundaries", () => {
     bad({ schemas: [] });
     bad({ schemas: schemas(33) });
     bad({ schemas: [{ id: "s", name: "S", controls: [] }] });
-    bad({ schemas: [{ id: "s", name: "S", controls: controls(17) }] });
+    bad({ schemas: [{ id: "s", name: "S", controls: controls(65) }] });
     expect(
       kapulaSessionConfigSchema.parse({
-        schemas: [{ id: "s", name: "S", controls: controls(16) }],
+        schemas: [{ id: "s", name: "S", controls: controls(64) }],
       }).schemas[0].controls,
-    ).toHaveLength(16);
+    ).toHaveLength(64);
   });
 
   test("labels, ids and colors are bounded", () => {
