@@ -49,6 +49,8 @@ test.describe("player client messages", () => {
     ok({ type: "input", seq: 42, controls: {} });
     // A physical gamepad's triggers are bare scalars.
     ok({ type: "input", seq: 43, controls: { lt: 0.5, rt: 1, dpad: "ul" } });
+    // An endless knob sends unbounded cumulative turns.
+    ok({ type: "input", seq: 44, controls: { jog: -12.5, cut: 3 } });
     ok({ type: "leave" });
   });
 
@@ -63,7 +65,6 @@ test.describe("player client messages", () => {
     bad({ type: "update_profile", name: "way too long a name" });
     bad({ type: "update_profile", color: "red" });
     bad({ type: "update_profile", color: "#ABC" });
-    bad({ type: "input", seq: 1, controls: { rt: 2 } });
     bad({ type: "input", seq: 1, controls: { rt: "0.5" } });
   });
 
@@ -219,12 +220,12 @@ test.describe("session config boundaries", () => {
     bad({ schemas: [] });
     bad({ schemas: schemas(33) });
     bad({ schemas: [{ id: "s", name: "S", controls: [] }] });
-    bad({ schemas: [{ id: "s", name: "S", controls: controls(17) }] });
+    bad({ schemas: [{ id: "s", name: "S", controls: controls(65) }] });
     expect(
       kapulaSessionConfigSchema.parse({
-        schemas: [{ id: "s", name: "S", controls: controls(16) }],
+        schemas: [{ id: "s", name: "S", controls: controls(64) }],
       }).schemas[0].controls,
-    ).toHaveLength(16);
+    ).toHaveLength(64);
   });
 
   test("labels, ids and colors are bounded", () => {

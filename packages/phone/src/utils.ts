@@ -6,18 +6,26 @@
  */
 export * from "./axis-utils.js";
 export * from "./debug-utils.js";
+export * from "./device-utils.js";
 export * from "./driver-payload.js";
+export * from "./control-state.js";
+export * from "./fader-utils.js";
+export * from "./gesture-utils.js";
+export * from "./knob-utils.js";
 export * from "./gyro-utils.js";
+export * from "./input-throttle.js";
 export * from "./layout-override.js";
 export * from "./layout-utils.js";
 export * from "./motion-utils.js";
 export * from "./orientation-utils.js";
+export * from "./page-strip-utils.js";
 export * from "./physical-gamepad-utils.js";
 export * from "./player-storage.js";
 export * from "./pointer-utils.js";
 export * from "./raw-touch-utils.js";
 export * from "./safe-area.js";
 export * from "./seq-counter.js";
+export * from "./input-state.js";
 export * from "./session-messages.js";
 export * from "./snapshot-utils.js";
 export { isTextEntry } from "./useViewportGuard.js";

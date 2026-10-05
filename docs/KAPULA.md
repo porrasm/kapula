@@ -156,25 +156,40 @@ any active state ──driver end / host end / driver away 3 min / 24h idle─�
                                     // editor and ignores stored edits: the
                                     // controller is exactly as described
                                     // (see "Exact positions" below)
+    "chrome": "full",               // "slim": 28 px page strip instead of the
+                                    // header (see "Slim chrome" below)
     "schemas": [                    // 1–32 control schemas; players pick one
       {
         "id": "tank",
         "name": "Tank",
         "orientation": "auto",      // optional layout hint: "auto" (default)
                                     // | "landscape" | "portrait"
-        "controls": [               // 1–16 controls, unique kebab-case ids,
+        "rate": "standard",         // "fast": ~60 fps input frames instead of
+                                    // ~30 (see "Input model")
+        "controls": [               // 1–64 controls, unique kebab-case ids,
                                     // ordered most-important-first (see
                                     // "Controller layout" below)
           { "type": "joystick", "id": "drive",    // mode "full" (x+y) default
             "zone": "left", "size": "large" },    // optional layout hints
           { "type": "joystick", "id": "aim", "mode": "x" },  // "x"|"y"|"dpad"
                                     // |"relative" (see "Joystick modes")
+          { "type": "fader", "id": "expr",  // a track + cap that stays put;
+            "axis": "v", "spring": false,  // "v"|"h", spring back on release
+            "default": 0 },         // start/spring value 0..1 (see "Faders")
+          { "type": "knob", "id": "cutoff",  // a rotary knob dragged
+            "mode": "absolute",     // vertically; "absolute"|"endless"
+            "default": 0 },         // (see "Knobs")
           { "type": "button", "id": "fire", "label": "Fire", "zone": "right",
             "shape": "rect" },      // optional "round" (default) | "rect"
+          { "type": "button", "id": "mute", "label": "M",
+            "mode": "toggle" },     // "momentary" (default) | "toggle": each
+                                    // tap flips a boolean, drawn lit while true
           { "type": "button", "id": "jump", "label": "Jump",
-            "x": 85, "y": 40 },     // optional exact center, % of the
+            "x": 85, "y": 40,       // optional exact center, % of the
                                     // controller's width/height (see
-                                    // "Exact positions")
+                                    // "Exact positions"), plus "w"/"h"
+                                    // size % and a "color" "#RRGGBB"
+            "w": 10, "h": 16, "color": "#FF6B6B" },
           { "type": "gyro", "id": "lean", "range": 45 },  // tilt sensor (max 1
                           // per schema); mode "full"|"x"|"y", range in degrees
           { "type": "text", "id": "answer", "label": "Answer",  // a button
@@ -379,6 +394,13 @@ every connection, not only in the setup response. Message shapes: see
 
 - Player → server: `input` (see below), `motion` (see "Raw motion stream"),
   `text {controlId, text}` (see "Text input"), `set_ready`, `select_schema`,
+  `device_info {device: {class: "phone"|"tablet", width, height, touch, motion}}`
+  (any live state; sent right after each (re)connect and on viewport changes,
+  debounced 500 ms; `class` is tablet when the shorter viewport side is
+  ≥ 600 CSS px, `motion` is whether the tilt probe found a usable sensor, false
+  until probed; the server keeps it per connection and broadcasts
+  `player_updated` with `player.device`, and `snapshot` players carry it too;
+  absent until the phone reports),
   `update_profile {name?, color?}` (lobby-only; rejected with an `error` when
   the name/color is taken), `leave` (allowed in **any** state — a paused or
   stuck session must never trap a player; frees the name/color slot, kills
@@ -439,7 +461,9 @@ shape follows its `mode` (see "Joystick modes" below): `"full"` and
 `{y}`), and `"dpad"` sends one of 9 short direction codes — `"c"` (centered)
 or `"u"`/`"ur"`/`"r"`/`"dr"`/`"d"`/`"dl"`/`"l"`/`"ul"` (kept to 1–2 chars
 because they ride in every full-state frame; `dpadToVector` in common maps
-them to unit vectors). Movement is throttled to ~30 fps; button
+them to unit vectors). Movement is throttled to ~30 fps (~60 fps when the
+schema sets `rate: "fast"` or has a `raw`/`touchpad` control; `rate` is
+`"standard"` by default, and the server's 120 frames/s cap is unchanged); button
 presses/releases flush immediately as their own frames. Every analog value is
 rounded to **3 decimals** on the phone (`roundAxis` in `axis-utils.ts`, shared
 by touch sticks, tilt and real gamepads): finer than a thumb can aim, and
@@ -506,6 +530,13 @@ draws it:
 | `"x"` / `"y"` | `{x}` / `{y}` | pill track along that axis |
 | `"dpad"` | `"c"`/`"u"`/`"ur"`/… | square with four arrows |
 
+**`spring`** (optional boolean, default `true`): with `false`, a `"full"` or
+`"relative"` stick (and the `"x"` / `"y"` tracks) keeps the value where the
+finger lifted instead of sending the center, and the knob stays drawn there.
+The next touch continues from that value without a jump: the drag is measured
+from the landing point, as `"relative"` already does. `"dpad"` ignores
+`spring` (it always returns to `"c"`).
+
 `"relative"` is the precision mode. There is no home position: the point the
 finger lands on becomes that touch's neutral, and the value is the drag from
 there — full deflection at `RELATIVE_STICK_TRAVEL` (0.35) of the pad's shorter
@@ -523,6 +554,63 @@ side, clamped to that circle. Two consequences a driver should count on:
 Values are ordinary axes otherwise — same range, same y-down convention, same
 ~30 fps throttle — so a driver that already handles `"full"` needs no new code
 to read a `"relative"` pad.
+
+### Toggle buttons
+
+A `button` with `"mode": "toggle"` (default `"momentary"`) flips on each tap
+(a pointerup inside the button) and is drawn lit while true. The wire value is
+still a boolean: the driver sees the state, not the taps. The phone starts a
+toggle as off and keeps the state only while the controller is mounted.
+
+### Faders
+
+A `fader` is a track with a cap that stays where the finger leaves it — the
+control a MIDI surface needs. Fields: `axis` (`"v"` default, a tall 1:3 track;
+`"h"`, a wide 3:1 one), `spring` (default `false`), `default` (0..1, default
+0), plus the usual `label`, `zone`, `size`, `x`, `y`. It is placed in a stick
+slot like a joystick and the layout editor moves it like any box.
+
+- **Wire value:** a bare number in [0, 1], rounded to three decimals — 0 is
+  the bottom (`"v"`) or left (`"h"`) end, 1 the top or right end.
+- **Initial value:** the first frame after the controller appears reports
+  `default`.
+- **Spring rule:** `spring: true` sends `default` on release (pitch-bend
+  style); `spring: false` keeps the last value, so the next frame still
+  carries where the cap was left.
+- **Dragging is relative:** the value follows the drag from where the finger
+  landed, so touching the track does not make the cap jump. Movement is
+  throttled like a stick (~30 fps); release is sent immediately.
+- **Fine mode and double-tap** (phone only, faders and knobs alike; the wire
+  still carries raw values): while a fader or knob is being dragged, a second
+  finger resting on the controller box, anywhere but on another control,
+  scales the drag by 0.1 for as long as it stays down (the drag re-anchors
+  when the finger lands or lifts, so the value does not jump). Two pointerups
+  on the control within 300 ms and 12 px set it to its `default` (a knob in
+  `endless` mode, to 0) and send a frame immediately. The math lives in
+  `gesture-utils.ts`.
+
+### Knobs
+
+A `knob` is a round rotary control. Fields: `mode` (`"absolute"` default, or
+`"endless"`), `default` (0..1, default 0; absolute only), plus the usual
+`label`, `zone`, `size`, `x`, `y`. It is placed in a stick slot like a
+joystick, drawn square and 0.7× a stick's size (`size` hints apply).
+
+- **Gesture:** a vertical drag anywhere on the knob, up = clockwise. The drag
+  is relative (no jump on touch-down), the knob captures the pointer so the
+  finger may leave it, and the travel is `KNOB_TRAVEL_PX` = 150 px: full
+  range for `absolute`, one turn for `endless`.
+- **`absolute`:** the wire value is a bare number in [0, 1], rounded to three
+  decimals, clamped at both ends and kept on release. The arc runs 270° from
+  7 o'clock to 5 o'clock and the value is shown inside the ring. The first
+  frame after the controller appears reports `default`.
+- **`endless`:** the wire value is the **cumulative rotation in turns** as a
+  bare float with three decimals — unbounded, possibly negative, 0 when the
+  controller appears (it is not clamped, and `default` is ignored). It is
+  cumulative rather than a delta so a dropped or coalesced frame loses
+  nothing: the driver computes `turns - previousTurns` between consecutive
+  values it sees. Because it is unbounded, input frames accept any finite
+  bare number, not only [-1, 1].
 
 ### Physical gamepads
 
@@ -626,6 +714,25 @@ payload a good carrier for a game's own state.
   up for the rest of the match. It renders above the controller and never
   moves a control.
 
+- `{ "set": { "<controlId>": value } }` — set a control's displayed state
+  **without emitting input** (the driver already knows the value, so no frame
+  is sent and the input `seq` does not move). A number for faders, knobs
+  (absolute: 0..1; endless: turns) and single-axis sticks (`x`/`y` modes), an
+  `{x, y}` object for `full` sticks, a boolean for `toggle` buttons. The value
+  becomes the control's current one, so the next touch continues from it: the
+  fader cap moves, the knob arc moves, the toggle is lit. Unknown ids and
+  values that do not fit the control are ignored per entry; `relative` sticks,
+  dpads and momentary buttons ignore `set`. Input frames are full snapshots, so
+  the pushed value is also written into the phone's input state: the next frame
+  (sent for any other control) reports it instead of the old value.
+  `{ "set": { "volume": 0.5, "mute": true, "aim": { "x": 0.3, "y": -0.2 } } }`
+- `{ "labels": { "<controlId>": "text" } }` — replace a control's label
+  (buttons, faders, knobs, sticks, text, touchpads), max 16 characters,
+  truncated. An empty string restores the schema's label.
+  `{ "labels": { "fire": "Reload", "mute": "" } }`
+
+Both `set` and `labels` are cleared when the player's schema changes.
+
 Both are additive conventions under version 1: a driver that sends neither is
 unaffected, and a phone that predates them ignores the keys.
 
@@ -728,7 +835,27 @@ past it. The two axes are independent — an axis left out keeps the engine's
 placement for that axis, so a driver can pin a row's height and let the
 engine spread it.
 
-What positions do **not** decide is size and shape: the engine still sizes
+**Exact mode.** When *every* laid-out control in a schema has both `x` and
+`y`, the engine skips zone assignment entirely (`resolveLayout` returns
+`exact: true`): no thumb zones, no overlap resolution, no orientation
+heuristic. Each control gets its own position and size. Sizes come from the
+optional **`w`** and **`h`** (0.5–100, percent of the controller box's width
+and height) on button, joystick, touchpad, text, fader and knob; the two are
+independent, so a control with only `w` keeps the engine's height for its
+type. Boxes are floored at `MIN_CONTROL_SIZE` (36 px) and clamped into the
+viewport. In exact mode `needsLandscape` is true only when the schema says
+`orientation: "landscape"` (the control-count heuristic is off), so set
+`orientation` to the box the percentages are meant for. A schema where even
+one laid-out control lacks `x` or `y` is *mixed* and behaves as described
+below (positions applied after the thumb-zone draft; `w` / `h` are ignored).
+The raised cap — up to **64 controls** per schema — exists for panels like
+mixers.
+
+**`color`** (`"#RRGGBB"`, same laid-out types) sets a control's accent: fader
+fill, knob arc, lit button, pad hit. The phone writes it into the control
+box's `--kp-accent-primary` variable, so the `kp-*` theme classes stay.
+
+What positions do **not** decide in a mixed schema is size and shape: the engine still sizes
 every control from its zone and `size` hint (a `"shoulder-*"` button is still
 a pill, an `"aux"` one a small pill, a thumb-zone button a round primary),
 and a positioned control still takes its slot in the engine's flow for the
@@ -746,6 +873,18 @@ a hinted or heuristic layout, or position controls and still let players
 adjust them. Both are purely additive: an old driver sends neither and gets
 exactly what it did before. The `Fixed` debug preset (an arcade cabinet
 panel) is the playground.
+
+### Slim chrome
+
+**`chrome`** (config, `"full"` | `"slim"`, default `"full"`) picks the phone's
+in-game header. `"slim"` replaces it with a 28 px strip: the game name on the
+left, one tab per selectable schema in the middle (the current one
+highlighted; tapping sends `select_schema`, like the menu's picker, with the same gates: tilt schemas ask for motion
+access first and are disabled when it is denied or unavailable; "Real
+gamepad" is a tab only with `allowPhysicalGamepad`) and a small Menu button on
+the right. The controller is measured under the strip, and the driver's
+`{ text }` line overlays it. A config without `chrome` is unchanged. Selecting
+"Real gamepad" shows the usual full-chrome bridge screen.
 
 ### Player layout editor
 
@@ -933,8 +1072,9 @@ image).
   touch-down to lift-off; a new finger takes the lowest free slot, so ids
   are small and reused. An 11th finger is ignored until one lifts.
 - Touch-downs and lifts flush immediately (edges, like buttons); movement
-  is coalesced at ~60 fps — any schema with a `raw` or `touchpad` control
-  uses the faster throttle (`POINTER_THROTTLE_MS` in `useInputSender.ts`),
+  is coalesced at ~60 fps — any schema with a `raw` or `touchpad` control,
+  or one that sets `rate: "fast"`, uses the faster throttle
+  (`POINTER_THROTTLE_MS`, chosen by `inputThrottleMs` in `input-throttle.ts`);
   other schemas keep ~30 fps.
 - It is the background, not a slot: the layout engine places nothing for
   it, and `Controller` renders `RawTouchSurface` over the whole box *under*
@@ -1200,7 +1340,7 @@ What it does:
   y-only and dpad; Aim pairs a walking stick with a `relative` aiming pad;
   Tilt and Wii cover the two sensor control types; Fixed pins every control
   with `x`/`y` and sets `disallowLayoutCustomization`; Touch is the `raw`
-  surface, alone and with tilt; Roster is the recovery path). It
+  surface, alone and with tilt; Roster is the recovery path; Surface is a slim-chrome, fast-rate control panel of faders, knobs, a toggle, an XY stick and a 4×4 pad grid, plus a Transport page). It
   prefills the admin's own pending
   session's setup code and
   can create a session right there, so the whole loop works from one page.
@@ -1287,3 +1427,12 @@ there rather than here.
   changes. Only the gravity-referenced tilt axes (beta/gamma) are used: yaw
   needs the compass, drifts, and was cut on purpose; revisit only with a
   proper sensor-fusion story.
+
+### Driver SDK
+
+[`@kapula/driver`](../packages/driver/README.md) wraps the driver setup/create
+and background HTTP APIs and exposes a typed WebSocket client for Node and
+browsers. It maintains a snapshot-authoritative player map, deduplicates input
+sequences across reconnects, reconnects transient closures with backoff, and
+sends application pings. The package README contains a complete setup example
+and documents its commands, events, injection options, and disposal behavior.

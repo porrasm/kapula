@@ -1,132 +1,42 @@
 import { useState } from "react";
-import { flushSync } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Redirect, Route, Switch, useLocation } from "wouter";
-import {
-  Button,
-  PlayerHome,
-  PlayerSession,
-  clearStoredPlayer,
-  loadStoredPlayer,
-  useNoPinchZoom,
-  type StoredPlayer,
-} from "@kapula/phone";
+import { Button, PhoneApp } from "@kapula/phone";
 import { HostPanel } from "./HostPanel";
 import { fetchMe, loginWithToken, logout } from "./host-api";
 
 /**
- * Routes of the reference host: "/" is the landing page (join form or the
- * stored session, plus the host panel for a logged-in user), "/join/:code"
- * prefills the join form (the link drivers render as QR codes), "/play" is
- * the controller.
+ * The reference host is `PhoneApp` plus its extras: the signed-in user in the
+ * heading row, and below the join form either the host panel (logged in) or
+ * the login form.
  */
-export const App = () => {
-  const [player, setPlayer] = useState(loadStoredPlayer);
-  const [leaveMessage, setLeaveMessage] = useState<string | null>(null);
-  const [, setLocation] = useLocation();
-  useNoPinchZoom();
+export const App = () => <PhoneApp title="Kapula" header={<UserBadge />} landingExtra={<HostExtra />} />;
 
-  const handleJoined = (joined: StoredPlayer) => {
-    // The player must be committed before navigating: a "/play" render that
-    // still sees a null player redirects straight back.
-    flushSync(() => {
-      setPlayer(joined);
-      setLeaveMessage(null);
-    });
-    setLocation("/play");
-  };
-  const handleLeave = (message?: string) => {
-    clearStoredPlayer();
-    setPlayer(null);
-    setLeaveMessage(message ?? null);
-    setLocation("/", { replace: true });
-  };
-  const handleStalePlayer = () => {
-    clearStoredPlayer();
-    setPlayer(null);
-  };
-
-  const landing = (initialJoinCode: string) => (
-    <Landing
-      initialJoinCode={initialJoinCode}
-      player={player}
-      leaveMessage={leaveMessage}
-      onJoined={handleJoined}
-      onStalePlayer={handleStalePlayer}
-    />
-  );
-
+const UserBadge = () => {
+  const meQuery = useQuery({ queryKey: ["me"], queryFn: fetchMe });
+  const user = meQuery.data?.user;
+  if (!user) return null;
   return (
-    <Switch>
-      <Route path="/play">
-        {player ? (
-          <PlayerSession player={player} onLeave={handleLeave} />
-        ) : (
-          <Redirect to="/" replace />
-        )}
-      </Route>
-      <Route path="/join/:code">
-        {(params) => landing(decodeURIComponent(params.code))}
-      </Route>
-      <Route path="/">{landing("")}</Route>
-      <Route>
-        <Redirect to="/" replace />
-      </Route>
-    </Switch>
+    <span className="ml-auto text-xs text-kp-text-muted">
+      {user.email}{" "}
+      <button
+        className="underline"
+        type="button"
+        onClick={() => logout().then(() => meQuery.refetch())}
+      >
+        log out
+      </button>
+    </span>
   );
 };
 
-const Landing = ({
-  initialJoinCode,
-  player,
-  leaveMessage,
-  onJoined,
-  onStalePlayer,
-}: {
-  initialJoinCode: string;
-  player: StoredPlayer | null;
-  leaveMessage: string | null;
-  onJoined: (player: StoredPlayer) => void;
-  onStalePlayer: () => void;
-}) => {
-  const [, navigate] = useLocation();
+const HostExtra = () => {
   const meQuery = useQuery({ queryKey: ["me"], queryFn: fetchMe });
   const me = meQuery.data ?? null;
-
-  return (
-    <div className="p-4 max-w-md mx-auto space-y-4">
-      <div className="flex items-baseline gap-2">
-        <h1 className="text-xl font-semibold text-kp-text-primary">Kapula</h1>
-        {me?.user && (
-          <span className="ml-auto text-xs text-kp-text-muted">
-            {me.user.email}{" "}
-            <button
-              className="underline"
-              type="button"
-              onClick={() => logout().then(() => meQuery.refetch())}
-            >
-              log out
-            </button>
-          </span>
-        )}
-      </div>
-
-      <PlayerHome
-        initialJoinCode={initialJoinCode}
-        player={player}
-        leaveMessage={leaveMessage}
-        onJoined={onJoined}
-        onStalePlayer={onStalePlayer}
-        onOpenController={() => navigate("/play")}
-      />
-
-      {me?.user ? (
-        <HostPanel />
-      ) : me ? (
-        <Login devAuth={me.devAuth} ownerLogin={me.ownerLogin} onLoggedIn={() => meQuery.refetch()} />
-      ) : null}
-    </div>
-  );
+  if (me?.user) return <HostPanel />;
+  if (me) {
+    return <Login devAuth={me.devAuth} ownerLogin={me.ownerLogin} onLoggedIn={() => meQuery.refetch()} />;
+  }
+  return null;
 };
 
 /** Dev: any email. Owner: the configured token. Neither: hosting is off. */

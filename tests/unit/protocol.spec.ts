@@ -10,6 +10,7 @@ import {
   dpadToVector,
   kapulaCodeSchema,
   kapulaErrorCodeSchema,
+  kapulaPlayerInfoSchema,
   kapulaInputFrameSchema,
   kapulaMotionSampleSchema,
   kapulaPlayerClientMessageSchema,
@@ -361,12 +362,19 @@ test.describe("joystick modes", () => {
         controls: [{ type: "joystick", id: "s", mode: "diagonal" }],
       }),
     ).toThrow();
-    // Buttons silently ignore an accidental mode key (zod strips it) but the
-    // result must not carry one.
+    // Buttons have their own mode (momentary | toggle): a joystick mode is
+    // rejected there, and a button without one carries none.
+    expect(() =>
+      controlSchemaSchema.parse({
+        id: "b",
+        name: "B",
+        controls: [{ type: "button", id: "a", label: "A", mode: "x" }],
+      }),
+    ).toThrow();
     const parsed = controlSchemaSchema.parse({
       id: "b",
       name: "B",
-      controls: [{ type: "button", id: "a", label: "A", mode: "x" }],
+      controls: [{ type: "button", id: "a", label: "A" }],
     });
     expect("mode" in parsed.controls[0]).toBe(false);
   });
@@ -692,15 +700,18 @@ test.describe("physical gamepads", () => {
     expect(PHYSICAL_GAMEPAD_CONTROLS.filter((c) => c.kind === "trigger")).toHaveLength(2);
   });
 
-  test("trigger values are analog scalars in [-1, 1]", () => {
+  test("trigger values are analog scalars", () => {
     const frame = kapulaInputFrameSchema.parse({
       seq: 1,
       controls: { lt: 0, rt: 0.75, a: true, dpad: "c" },
     });
     expect(frame.controls["rt"]).toBe(0.75);
-    expect(() =>
-      kapulaInputFrameSchema.parse({ seq: 1, controls: { rt: 1.5 } }),
-    ).toThrow();
+    // Bare numbers are unbounded since endless knobs (cumulative turns).
+    expect(
+      kapulaInputFrameSchema.parse({ seq: 1, controls: { rt: 1.5 } }).controls[
+        "rt"
+      ],
+    ).toBe(1.5);
     expect(() =>
       kapulaInputFrameSchema.parse({ seq: 1, controls: { rt: Number.NaN } }),
     ).toThrow();
@@ -782,4 +793,170 @@ test.describe("motion controls and stream", () => {
     });
     expect(parsed.type).toBe("motion");
   });
+});
+
+test.describe("fader control", () => {
+  test("accepts a bare fader with defaults", async () => {
+    const { kapulaControlSchema } = await import("@kapula/protocol");
+    expect(kapulaControlSchema.parse({ type: "fader", id: "expr" })).toEqual({
+      type: "fader",
+      id: "expr",
+      axis: "v",
+      spring: false,
+      default: 0,
+    });
+  });
+
+  test("accepts options and rejects bad ones", async () => {
+    const { kapulaControlSchema } = await import("@kapula/protocol");
+    const ok = kapulaControlSchema.parse({
+      type: "fader",
+      id: "bend",
+      axis: "h",
+      spring: true,
+      default: 0.5,
+      zone: "left",
+    });
+    expect(ok).toMatchObject({ axis: "h", spring: true, default: 0.5 });
+    for (const bad of [
+      { default: 1.5 },
+      { default: -0.1 },
+      { axis: "x" },
+      { spring: "yes" },
+    ]) {
+      expect(
+        kapulaControlSchema.safeParse({ type: "fader", id: "f", ...bad })
+          .success,
+      ).toBe(false);
+    }
+  });
+});
+
+test.describe("knob control", () => {
+  test("accepts absolute and endless knobs with defaults", async () => {
+    const { kapulaControlSchema } = await import("@kapula/protocol");
+    expect(kapulaControlSchema.parse({ type: "knob", id: "cutoff" })).toEqual({
+      type: "knob",
+      id: "cutoff",
+      mode: "absolute",
+      default: 0,
+    });
+    expect(
+      kapulaControlSchema.parse({ type: "knob", id: "jog", mode: "endless" }),
+    ).toMatchObject({ mode: "endless" });
+  });
+
+  test("rejects an unknown mode and a bad default", async () => {
+    const { kapulaControlSchema } = await import("@kapula/protocol");
+    for (const bad of [{ mode: "spin" }, { default: 1.5 }, { default: -1 }]) {
+      expect(
+        kapulaControlSchema.safeParse({ type: "knob", id: "k", ...bad })
+          .success,
+      ).toBe(false);
+    }
+  });
+
+  test("input frames carry unbounded endless turns", async () => {
+    const { kapulaInputFrameSchema } = await import("@kapula/protocol");
+    expect(
+      kapulaInputFrameSchema.safeParse({ seq: 1, controls: { jog: -7.25 } })
+        .success,
+    ).toBe(true);
+    expect(
+      kapulaInputFrameSchema.safeParse({ seq: 1, controls: { jog: 12.5 } })
+        .success,
+    ).toBe(true);
+  });
+});
+
+test.describe("exact control geometry", () => {
+  const button = (i: number, extra: object = {}) => ({
+    type: "button" as const,
+    id: `b${i}`,
+    label: "B",
+    ...extra,
+  });
+  const schema = (controls: object[]) =>
+    controlSchemaSchema.safeParse({ id: "s", name: "S", controls });
+
+  test("accepts 64 controls and rejects 65", () => {
+    expect(schema(Array.from({ length: 64 }, (_, i) => button(i))).success).toBe(true);
+    expect(schema(Array.from({ length: 65 }, (_, i) => button(i))).success).toBe(false);
+  });
+
+  test("w and h are 0.5-100 on every laid-out type", () => {
+    const types = [
+      { type: "button", label: "B" },
+      { type: "joystick" },
+      { type: "touchpad" },
+      { type: "text" },
+      { type: "fader" },
+      { type: "knob" },
+    ];
+    for (const t of types) {
+      const ok = (extra: object) => schema([{ ...t, id: "c", ...extra }]).success;
+      expect(ok({ w: 0.5, h: 100 })).toBe(true);
+      expect(ok({ w: 20 })).toBe(true);
+      expect(ok({ w: 0.4 })).toBe(false);
+      expect(ok({ h: 100.1 })).toBe(false);
+      expect(ok({ color: "#ff8800" })).toBe(true);
+      expect(ok({ color: "orange" })).toBe(false);
+      expect(ok({ color: "#fff" })).toBe(false);
+    }
+  });
+});
+
+test.describe("schema rate", () => {
+  const base = { id: "s", name: "S", controls: [{ type: "button", id: "a", label: "A" }] };
+  test("accepts fast and standard, absent by default, rejects turbo", () => {
+    expect(controlSchemaSchema.parse({ ...base, rate: "fast" }).rate).toBe("fast");
+    expect(controlSchemaSchema.parse({ ...base, rate: "standard" }).rate).toBe("standard");
+    expect(controlSchemaSchema.parse(base).rate).toBeUndefined();
+    expect(controlSchemaSchema.safeParse({ ...base, rate: "turbo" }).success).toBe(false);
+  });
+});
+
+test.describe("device_info", () => {
+  const device = { class: "phone", width: 844, height: 390, touch: true, motion: false };
+
+  test("is a player message in any state and validates the device", () => {
+    expect(
+      kapulaPlayerClientMessageSchema.safeParse({ type: "device_info", device }).success,
+    ).toBe(true);
+    for (const bad of [
+      { ...device, class: "watch" },
+      { ...device, width: 1.5 },
+      { ...device, touch: "yes" },
+      { class: "phone", width: 1, height: 1, touch: true },
+    ]) {
+      expect(
+        kapulaPlayerClientMessageSchema.safeParse({ type: "device_info", device: bad }).success,
+      ).toBe(false);
+    }
+  });
+
+  test("player info carries an optional device; old info still validates", () => {
+    const info = {
+      playerId: "p",
+      name: "A",
+      color: "#FF6B6B",
+      ready: false,
+      connected: true,
+      schemaId: "s",
+    };
+    expect(kapulaPlayerInfoSchema.safeParse(info).success).toBe(true);
+    expect(kapulaPlayerInfoSchema.parse({ ...info, device }).device).toEqual(device);
+    expect(kapulaPlayerInfoSchema.safeParse({ ...info, device: { class: "x" } }).success).toBe(false);
+    expect(
+      kapulaServerMessageSchema.safeParse({ type: "player_updated", player: { ...info, device } }).success,
+    ).toBe(true);
+  });
+});
+
+test("deviceInfoFor derives class from the shorter side", async () => {
+  const { deviceInfoFor } = await import("@kapula/phone/utils");
+  expect(deviceInfoFor(844, 390, true, false).class).toBe("phone");
+  expect(deviceInfoFor(390, 844, true, false).class).toBe("phone");
+  expect(deviceInfoFor(1024, 768, true, true).class).toBe("tablet");
+  expect(deviceInfoFor(1280, 599.6, false, false)).toMatchObject({ class: "tablet", height: 600 });
 });

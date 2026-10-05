@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDeviceInfo } from "./useDeviceInfo.js";
 import {
   PHYSICAL_GAMEPAD_SCHEMA_ID,
   type ControlSchema,
@@ -10,10 +11,17 @@ import {
 } from "@kapula/protocol";
 import { Button, LoadingState } from "./ui.js";
 import { Controller } from "./Controller.js";
-import { DRIVER_TEXT_MS, parseDriverPayload } from "./driver-payload.js";
+import {
+  DRIVER_TEXT_MS,
+  NO_OVERRIDES,
+  applyDriverOverrides,
+  parseDriverPayload,
+  type ControlOverrides,
+} from "./driver-payload.js";
 import { LayoutEditor } from "./LayoutEditor.js";
 import { layoutModeForOrientation } from "./layout-override.js";
 import { canCustomizeLayout } from "./layout-utils.js";
+import { PageStrip } from "./PageStrip.js";
 import { Lobby } from "./Lobby.js";
 import { OrientedSurface, useContentFrame } from "./OrientedSurface.js";
 import { PhysicalGamepadPanel } from "./PhysicalGamepadPanel.js";
@@ -94,6 +102,15 @@ export const PlayerSession = ({ player, onLeave }: PlayerSessionProps) => {
   // bridging a real controller, so a buzz reaches the right hardware.
   const physicalRef = useRef(false);
 
+  // The driver's { set } / { labels } pushes. Keyed to the schema they were
+  // applied against: a switch (or a new schema under the same id) starts clean.
+  const [overridesState, setOverridesState] = useState<{
+    schemaId: string;
+    overrides: ControlOverrides;
+  } | null>(null);
+  const schemaRef = useRef<ControlSchema | null>(null);
+  const overrideRevRef = useRef(0);
+
   const onMessage = useCallback((msg: KapulaServerMessage) => {
     setSnapshot((prev) => applyServerMessage(prev, msg));
     if (msg.type === "state_changed") {
@@ -112,7 +129,7 @@ export const PlayerSession = ({ player, onLeave }: PlayerSessionProps) => {
     } else if (msg.type === "message") {
       // Driver → player conventions (driver-payload.ts); anything else in the
       // payload is delivered and ignored, as the relay promises.
-      const { vibrateMs, text } = parseDriverPayload(msg.payload);
+      const { vibrateMs, text, set, labels } = parseDriverPayload(msg.payload);
       if (vibrateMs !== null) {
         if ("vibrate" in navigator) navigator.vibrate(vibrateMs);
         // A phone being used as a bridge is lying on the table; the buzz
@@ -120,10 +137,24 @@ export const PlayerSession = ({ player, onLeave }: PlayerSessionProps) => {
         if (physicalRef.current) rumblePhysicalGamepad(vibrateMs);
       }
       if (text !== undefined) showDriverText(text);
+      const schema = schemaRef.current;
+      if (schema) {
+        const parsed = { set, labels };
+        const rev = (overrideRevRef.current += 1);
+        setOverridesState((prev) => {
+          const base =
+            prev?.schemaId === schema.id ? prev.overrides : NO_OVERRIDES;
+          const next = applyDriverOverrides(base, parsed, schema, rev);
+          return next === base && prev?.schemaId === schema.id
+            ? prev
+            : { schemaId: schema.id, overrides: next };
+        });
+      }
     }
   }, []);
 
   const { isConnected, fatalClose, send } = useKapulaSocket(url, onMessage);
+  useDeviceInfo(isConnected, send);
 
   // Everything below renders in position: fixed layers; a leftover window
   // scroll (the lobby's keyboard, a scrolled landing page) would paint them
@@ -206,6 +237,7 @@ export const PlayerSession = ({ player, onLeave }: PlayerSessionProps) => {
   const schema =
     snapshot.config.schemas.find((s) => s.id === me?.schemaId) ??
     snapshot.config.schemas[0];
+  schemaRef.current = schema;
   physicalRef.current = me?.schemaId === PHYSICAL_GAMEPAD_SCHEMA_ID;
 
   if (snapshot.state === "waiting_for_players") {
@@ -272,6 +304,11 @@ export const PlayerSession = ({ player, onLeave }: PlayerSessionProps) => {
         isConnected={isConnected}
         notice={notice}
         driverText={driverText}
+        overrides={
+          overridesState?.schemaId === schema.id
+            ? overridesState.overrides
+            : undefined
+        }
         send={send}
         seq={seqRef.current}
         onLeave={leave}
@@ -335,6 +372,8 @@ type InGameProps = {
   notice: string | null;
   /** The driver's `{ text }` line, shown under the header for a few seconds. */
   driverText: string | null;
+  /** The driver's `set` / `labels` pushes for this schema. */
+  overrides?: ControlOverrides;
   send: (msg: KapulaPlayerClientMessage) => void;
   seq: SeqCounter;
   onLeave: () => void;
@@ -358,6 +397,7 @@ const InGame = ({
   isConnected,
   notice,
   driverText,
+  overrides,
   send,
   seq,
   onLeave,
@@ -387,30 +427,53 @@ const InGame = ({
 
   return (
     <>
-      <header
-        className="flex items-center gap-2 border-b border-kp-border"
-        style={{ padding: "0.5rem 1rem" }}
-      >
-        <Identity me={me} isConnected={isConnected} />
-        <Button
-          size="small"
-          variant="ghost"
-          data-testid="open-menu"
-          disabled={menuVisible}
-          onClick={() => setMenuOpen(true)}
-        >
-          Menu
-        </Button>
-      </header>
-      {notice && (
-        <div
-          className="py-2 px-4 text-sm text-kp-accent-warning bg-kp-accent-warning/10"
-          data-testid="session-notice"
-        >
-          {notice}
-        </div>
+      {snapshot.config.chrome === "slim" ? (
+        <>
+          <PageStrip
+            config={snapshot.config}
+            currentSchemaId={me?.schemaId}
+            onSelectSchema={(schemaId) => send({ type: "select_schema", schemaId })}
+            menuDisabled={menuVisible}
+            onOpenMenu={() => setMenuOpen(true)}
+            driverText={driverText}
+          />
+          {notice && (
+            <div
+              className="py-2 px-4 text-sm text-kp-accent-warning bg-kp-accent-warning/10"
+              data-testid="session-notice"
+            >
+              {notice}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <header
+            className="flex items-center gap-2 border-b border-kp-border"
+            style={{ padding: "0.5rem 1rem" }}
+          >
+            <Identity me={me} isConnected={isConnected} />
+            <Button
+              size="small"
+              variant="ghost"
+              data-testid="open-menu"
+              disabled={menuVisible}
+              onClick={() => setMenuOpen(true)}
+            >
+              Menu
+            </Button>
+          </header>
+          {notice && (
+            <div
+              className="py-2 px-4 text-sm text-kp-accent-warning bg-kp-accent-warning/10"
+              data-testid="session-notice"
+            >
+              {notice}
+            </div>
+          )}
+          <DriverText text={driverText} />
+        </>
       )}
-      <DriverText text={driverText} />
       <div className="flex-1 flex flex-col relative min-h-0">
         <Controller
           // Remounted per schema: a switch mid-game must not keep sending the
@@ -423,6 +486,7 @@ const InGame = ({
           layoutOverride={customizable ? layout.override : null}
           seq={seq}
           background={snapshot.background}
+          overrides={overrides}
         />
         {menuVisible && (
           <SessionMenu
@@ -465,7 +529,7 @@ const InGamePhysical = ({
   send,
   seq,
   onLeave,
-}: Omit<InGameProps, "schema">) => {
+}: Omit<InGameProps, "schema" | "overrides">) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const paused = snapshot.state === "paused";
   const menuVisible = paused || menuOpen;

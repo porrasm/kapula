@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Publishes the three packages, in dependency order, under one version and
+ * Publishes the four packages, in dependency order, under one version and
  * one dist-tag. Run `npm login` first. The working tree must be clean: the
  * script commits the version bump and tags it.
  *
@@ -35,7 +35,7 @@ try {
   run("npm install --package-lock-only");
   run("npm run build:packages");
   run("npx playwright test --project=unit");
-  for (const name of ["protocol", "server", "phone"]) {
+  for (const name of ["protocol", "server", "phone", "driver"]) {
     run(`npm publish --workspace=packages/${name} --tag ${tag}${dryRun ? " --dry-run" : ""}`);
   }
 } catch (e) {

@@ -119,6 +119,9 @@ export type KapulaControlZone = z.infer<typeof kapulaControlZoneSchema>;
 export const kapulaControlSizeSchema = z.enum(["small", "medium", "large"]);
 export type KapulaControlSize = z.infer<typeof kapulaControlSizeSchema>;
 
+/** Most controls one schema may hold. */
+export const KAPULA_MAX_CONTROLS = 64;
+
 /**
  * Exact placement — the one hint that is geometry: the control's center as
  * a percentage (0–100) of the controller box's width (`x`, from the left
@@ -131,6 +134,24 @@ export type KapulaControlSize = z.infer<typeof kapulaControlSizeSchema>;
  * `disallowLayoutCustomization`.
  */
 export const kapulaControlPositionSchema = z.number().min(0).max(100);
+
+/**
+ * Exact size — `w` / `h` on a laid-out control: its width / height as a
+ * percentage (0.5–100) of the controller box's width / height. Both are
+ * optional and independent; a control with only `w` keeps the engine's
+ * height. They take effect when every control in the schema has `x` and `y`
+ * ("exact" layout); in mixed schemas the engine still sizes the controls.
+ */
+export const kapulaControlExtentSchema = z.number().min(0.5).max(100);
+
+/**
+ * A control's accent as `#RRGGBB` (fader fill, knob arc, lit button, pad
+ * hit). The phone sets it as a CSS variable on the control box, so the
+ * kp-* theme classes stay.
+ */
+export const kapulaControlColorSchema = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, "Colors must be #RRGGBB hex");
 
 /**
  * A button's outline: "round" (default — a circle under a thumb, a pill on
@@ -148,7 +169,17 @@ export const kapulaButtonControlSchema = z.object({
   size: kapulaControlSizeSchema.optional(),
   x: kapulaControlPositionSchema.optional(),
   y: kapulaControlPositionSchema.optional(),
+  w: kapulaControlExtentSchema.optional(),
+  h: kapulaControlExtentSchema.optional(),
+  color: kapulaControlColorSchema.optional(),
   shape: kapulaButtonShapeSchema.optional(),
+  /**
+   * "momentary" (default): true while held. "toggle": each tap (pointerup
+   * inside the button) flips a boolean, and the phone draws the button lit
+   * while it is true. The wire value stays a boolean — the driver sees the
+   * state, not the taps.
+   */
+  mode: z.enum(["momentary", "toggle"]).optional(),
 });
 
 /**
@@ -177,10 +208,86 @@ export const kapulaJoystickControlSchema = z.object({
   id: idSchema,
   label: z.string().min(1).max(16).optional(),
   mode: kapulaJoystickModeSchema.default("full"),
+  /**
+   * Default true: the stick returns to center on release and sends it. With
+   * false a "full" / "relative" stick (and the "x" / "y" tracks) keeps the
+   * value where the finger lifted; the next touch continues from it without
+   * a jump. "dpad" ignores it.
+   */
+  spring: z.boolean().optional(),
   zone: kapulaControlZoneSchema.optional(),
   size: kapulaControlSizeSchema.optional(),
   x: kapulaControlPositionSchema.optional(),
   y: kapulaControlPositionSchema.optional(),
+  w: kapulaControlExtentSchema.optional(),
+  h: kapulaControlExtentSchema.optional(),
+  color: kapulaControlColorSchema.optional(),
+});
+
+/**
+ * Which way a fader runs: "v" (default) is a tall track, "h" a wide one.
+ */
+export const kapulaFaderAxisSchema = z.enum(["v", "h"]);
+export type KapulaFaderAxis = z.infer<typeof kapulaFaderAxisSchema>;
+
+/**
+ * A fader: a track with a cap that stays where the finger leaves it, the
+ * first control a MIDI surface needs. Reports a bare number in [0, 1]
+ * (0 = bottom / left end, 1 = top / right end), rounded to three decimals.
+ * The first frame after the controller appears reports `default`.
+ *
+ * - `spring: false` (default): the value is kept on release.
+ * - `spring: true`: the cap returns to `default` on release and that value
+ *   is sent (pitch-bend style).
+ *
+ * Dragging is relative: the value follows the drag from where the finger
+ * landed, so touching the track does not make the cap jump.
+ */
+export const kapulaFaderControlSchema = z.object({
+  type: z.literal("fader"),
+  id: idSchema,
+  label: z.string().min(1).max(16).optional(),
+  axis: kapulaFaderAxisSchema.default("v"),
+  spring: z.boolean().default(false),
+  default: z.number().min(0).max(1).default(0),
+  zone: kapulaControlZoneSchema.optional(),
+  size: kapulaControlSizeSchema.optional(),
+  x: kapulaControlPositionSchema.optional(),
+  y: kapulaControlPositionSchema.optional(),
+  w: kapulaControlExtentSchema.optional(),
+  h: kapulaControlExtentSchema.optional(),
+  color: kapulaControlColorSchema.optional(),
+});
+
+/** How a knob reports: a position in [0, 1], or cumulative turns. */
+export const kapulaKnobModeSchema = z.enum(["absolute", "endless"]);
+export type KapulaKnobMode = z.infer<typeof kapulaKnobModeSchema>;
+
+/**
+ * A rotary knob, dragged vertically (up = clockwise).
+ *
+ * - `mode: "absolute"` (default): reports a bare number in [0, 1], rounded to
+ *   three decimals; the arc spans 270° and the value is kept on release. The
+ *   first frame after the controller appears reports `default`.
+ * - `mode: "endless"`: reports the cumulative rotation in turns as a bare
+ *   float (three decimals, unbounded, may be negative, 0 when the controller
+ *   appears; `default` is ignored). Cumulative rather than deltas so a dropped
+ *   or coalesced frame loses nothing: the driver differences consecutive
+ *   values.
+ */
+export const kapulaKnobControlSchema = z.object({
+  type: z.literal("knob"),
+  id: idSchema,
+  label: z.string().min(1).max(16).optional(),
+  mode: kapulaKnobModeSchema.default("absolute"),
+  default: z.number().min(0).max(1).default(0),
+  zone: kapulaControlZoneSchema.optional(),
+  size: kapulaControlSizeSchema.optional(),
+  x: kapulaControlPositionSchema.optional(),
+  y: kapulaControlPositionSchema.optional(),
+  w: kapulaControlExtentSchema.optional(),
+  h: kapulaControlExtentSchema.optional(),
+  color: kapulaControlColorSchema.optional(),
 });
 
 /**
@@ -273,6 +380,9 @@ export const kapulaTouchpadControlSchema = z.object({
   size: kapulaControlSizeSchema.optional(),
   x: kapulaControlPositionSchema.optional(),
   y: kapulaControlPositionSchema.optional(),
+  w: kapulaControlExtentSchema.optional(),
+  h: kapulaControlExtentSchema.optional(),
+  color: kapulaControlColorSchema.optional(),
 });
 
 /** Longest text a `text` control sends (and its `maxLength` ceiling). */
@@ -298,12 +408,17 @@ export const kapulaTextControlSchema = z.object({
   size: kapulaControlSizeSchema.optional(),
   x: kapulaControlPositionSchema.optional(),
   y: kapulaControlPositionSchema.optional(),
+  w: kapulaControlExtentSchema.optional(),
+  h: kapulaControlExtentSchema.optional(),
+  color: kapulaControlColorSchema.optional(),
   shape: kapulaButtonShapeSchema.optional(),
 });
 
 export const kapulaControlSchema = z.discriminatedUnion("type", [
   kapulaButtonControlSchema,
   kapulaJoystickControlSchema,
+  kapulaFaderControlSchema,
+  kapulaKnobControlSchema,
   kapulaGyroControlSchema,
   kapulaMotionControlSchema,
   kapulaRawControlSchema,
@@ -313,6 +428,8 @@ export const kapulaControlSchema = z.discriminatedUnion("type", [
 export type KapulaControl = z.infer<typeof kapulaControlSchema>;
 export type KapulaTouchpadControl = z.infer<typeof kapulaTouchpadControlSchema>;
 export type KapulaTextControl = z.infer<typeof kapulaTextControlSchema>;
+export type KapulaKnobControl = z.infer<typeof kapulaKnobControlSchema>;
+export type KapulaFaderControl = z.infer<typeof kapulaFaderControlSchema>;
 export type KapulaGyroControl = z.infer<typeof kapulaGyroControlSchema>;
 export type KapulaMotionControl = z.infer<typeof kapulaMotionControlSchema>;
 export type KapulaRawControl = z.infer<typeof kapulaRawControlSchema>;
@@ -337,7 +454,13 @@ export const controlSchemaSchema = z
     id: idSchema,
     name: z.string().min(1).max(32),
     orientation: kapulaOrientationSchema.default("auto"),
-    controls: z.array(kapulaControlSchema).min(1).max(16),
+    /**
+     * Input frame rate hint: `"standard"` (~30 fps, default) or `"fast"`
+     * (~60 fps, for faders or knobs riding a CC). Schemas with a `raw` or
+     * `touchpad` control are always fast.
+     */
+    rate: z.enum(["standard", "fast"]).optional(),
+    controls: z.array(kapulaControlSchema).min(1).max(KAPULA_MAX_CONTROLS),
   })
   .superRefine((schema, ctx) => {
     const ids = new Set<string>();
@@ -548,6 +671,14 @@ const kapulaSessionConfigInputSchema = z.object({
    * false — players own their layout.
    */
   disallowLayoutCustomization: z.boolean().default(false),
+  /**
+   * The phone's in-game chrome. `"full"` (default, same as absent) is the
+   * usual header with the player name and Menu button. `"slim"` shrinks it to
+   * a 28 px strip — game name, one tab per selectable schema, a small Menu
+   * button — leaving the controller as much of the screen as possible, for
+   * tablet mixers and the like. Carried verbatim.
+   */
+  chrome: z.enum(["full", "slim"]).optional(),
   /** Default 1; derived from the roster when one is given. */
   minPlayers: z.number().int().min(1).max(KAPULA_MAX_PLAYERS_LIMIT).optional(),
   /** Default 8; derived from the roster when one is given. */
@@ -776,6 +907,20 @@ export const kapulaBackgroundSchema = z.object({
 });
 export type KapulaBackground = z.infer<typeof kapulaBackgroundSchema>;
 
+/**
+ * What the phone reports about itself with `device_info`. `class` comes from
+ * the shorter viewport side (>= 600 CSS px is a tablet); `motion` says whether
+ * a usable tilt sensor was found.
+ */
+export const kapulaDeviceInfoSchema = z.object({
+  class: z.enum(["phone", "tablet"]),
+  width: z.number().int().nonnegative(),
+  height: z.number().int().nonnegative(),
+  touch: z.boolean(),
+  motion: z.boolean(),
+});
+export type KapulaDeviceInfo = z.infer<typeof kapulaDeviceInfoSchema>;
+
 export const kapulaPlayerInfoSchema = z.object({
   playerId: z.string(),
   name: z.string(),
@@ -783,6 +928,8 @@ export const kapulaPlayerInfoSchema = z.object({
   ready: z.boolean(),
   connected: z.boolean(),
   schemaId: z.string(),
+  /** Last `device_info` of the current connection; absent until one arrives. */
+  device: kapulaDeviceInfoSchema.optional(),
 });
 export type KapulaPlayerInfo = z.infer<typeof kapulaPlayerInfoSchema>;
 
@@ -878,8 +1025,10 @@ export type KapulaRawTouch = z.infer<typeof kapulaRawTouchSchema>;
 /**
  * Buttons are booleans; joysticks report by mode — full: `{x, y}`,
  * single-axis: `{x}` / `{y}` (all axes normalized to [-1, 1]), dpad: a
- * direction string. A bare number is an analog scalar in [-1, 1] — today
- * only a physical gamepad's triggers send one (0 = released, 1 = pulled).
+ * direction string. A bare number is an analog scalar in [-1, 1] — a
+ * physical gamepad's triggers (0 = released, 1 = pulled) and a `fader`
+ * (position in [0, 1]) send one; an `endless` knob sends cumulative turns,
+ * which is unbounded.
  * An array is a `raw` or `touchpad` control's fingers (empty when nothing
  * touches).
  */
@@ -891,7 +1040,9 @@ export const kapulaInputValueSchema = z.union([
   z.strictObject({ x: axisSchema }),
   z.strictObject({ y: axisSchema }),
   kapulaDpadDirectionSchema,
-  axisSchema,
+  // Bare numbers: triggers, faders and absolute knobs stay in [-1, 1], but an
+  // endless knob's cumulative turns are unbounded.
+  z.number().finite(),
   z.array(kapulaRawTouchSchema).max(KAPULA_RAW_MAX_TOUCHES),
 ]);
 export type KapulaInputValue = z.infer<typeof kapulaInputValueSchema>;
@@ -978,6 +1129,8 @@ export const kapulaPlayerClientMessageSchema = z.discriminatedUnion("type", [
     name: kapulaPlayerNameSchema.optional(),
     color: kapulaColorSchema.optional(),
   }),
+  /** Any live state: the phone's device class and viewport, after each (re)connect and resize. */
+  z.object({ type: z.literal("device_info"), device: kapulaDeviceInfoSchema }),
   /**
    * Full controller state. `seq` is phone-owned and strictly increasing for
    * the player's lifetime (see kapulaInputFrameSchema); the server drops a

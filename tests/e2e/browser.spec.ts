@@ -2,6 +2,7 @@ import { test, expect, type Browser, type Page } from "@playwright/test";
 import { KAPULA_METADATA_MAX_LENGTH } from "@kapula/protocol";
 import { devLogin, hostCall } from "./ws-utils";
 import { TestDriver } from "./test-driver";
+import { DEBUG_PRESETS } from "@kapula/phone/utils";
 
 
 const TANK_CONFIG = {
@@ -136,6 +137,21 @@ test("full session flow: setup, lobby, input relay, pause, end", async ({
     const drive = (m.controls as Record<string, { x?: number }>).drive;
     return typeof drive === "object" && (drive?.x ?? 0) > 0.3;
   });
+  await alice.mouse.up();
+
+  // Regression: a default (spring) full stick measures from the pad center, so
+  // a touch-down near the edge reports a large deflection immediately.
+  const seqBefore = driver.messages.length;
+  await alice.mouse.move(box.x + box.width * 0.9, box.y + box.height / 2);
+  await alice.mouse.down();
+  await driver.waitFor(
+    (m) => {
+      if (m.type !== "input") return false;
+      if (driver.messages.indexOf(m) < seqBefore) return false;
+      const drive = (m.controls as Record<string, { x?: number }>).drive;
+      return typeof drive === "object" && (drive?.x ?? 0) > 0.6;
+    },
+  );
   await alice.mouse.up();
 
   driver.send({ type: "pause" });
@@ -634,6 +650,106 @@ test("a driver can pin controls by x/y and lock the layout against editing", asy
   );
   await alice.mouse.up();
 
+  driver.send({ type: "end" });
+  driver.close();
+});
+
+test("slim chrome: 28px strip, tabs switch schema, menu opens, driver text overlays", async ({
+  page,
+  browser,
+  request,
+}) => {
+  const setupCode = await createHostSession(page);
+  const setup = await TestDriver.setup(request, setupCode, {
+    ...TANK_CONFIG,
+    chrome: "slim",
+    schemas: [
+      TANK_CONFIG.schemas[0],
+      { id: "alt", name: "Alt", controls: [{ type: "button", id: "go", label: "Go" }] },
+    ],
+  });
+  const driver = new TestDriver();
+  await driver.connect(setup.wsPath);
+  const alice = await joinAsPlayer(browser, setup.joinCode, "Alice");
+  await alice.setViewportSize({ width: 568, height: 320 });
+  await alice.getByTestId("ready-toggle").click();
+  driver.send({ type: "start" });
+
+  const strip = alice.getByTestId("page-strip");
+  await expect(strip).toBeVisible();
+  expect((await strip.boundingBox())!.height).toBeCloseTo(28, 0);
+  await expect(alice.getByTestId("page-tab-tank")).toHaveAttribute("aria-current", "page");
+
+  await alice.getByTestId("page-tab-alt").click();
+  await expect(alice.getByTestId("page-tab-alt")).toHaveAttribute("aria-current", "page");
+  await expect(alice.getByTestId("control-go")).toBeVisible();
+
+  driver.send({ type: "message", payload: { text: "Round 2" } });
+  await expect(alice.getByTestId("driver-text")).toHaveText("Round 2");
+  expect((await strip.boundingBox())!.height).toBeCloseTo(28, 0);
+
+  await alice.getByTestId("open-menu").click();
+  await expect(alice.getByTestId("session-menu")).toBeVisible();
+  driver.send({ type: "end" });
+  driver.close();
+});
+
+const surfaceConfig = () =>
+  DEBUG_PRESETS.find((p) => p.key === "surface")!.config as typeof TANK_CONFIG;
+
+test("surface preset: dragging the first fader sends a numeric value", async ({
+  page,
+  browser,
+  request,
+}) => {
+  const setupCode = await createHostSession(page);
+  const setup = await TestDriver.setup(request, setupCode, surfaceConfig());
+  const driver = new TestDriver();
+  await driver.connect(setup.wsPath);
+  const alice = await joinAsPlayer(browser, setup.joinCode, "Alice");
+  await alice.setViewportSize({ width: 844, height: 390 });
+  await alice.getByTestId("ready-toggle").click();
+  driver.send({ type: "start" });
+
+  const fader = alice.getByTestId("control-fader1");
+  await expect(fader).toBeVisible();
+  const box = (await fader.boundingBox())!;
+  await alice.mouse.move(box.x + box.width / 2, box.y + box.height - 10);
+  await alice.mouse.down();
+  await alice.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
+    steps: 6,
+  });
+  await alice.mouse.up();
+
+  const frame = await driver.waitFor(
+    (m) =>
+      m.type === "input" &&
+      typeof (m.controls as Record<string, unknown>).fader1 === "number" &&
+      ((m.controls as Record<string, number>).fader1 ?? 0) > 0.2,
+  );
+  expect((frame.controls as Record<string, number>).fader1).toBeLessThanOrEqual(1);
+  driver.send({ type: "end" });
+  driver.close();
+});
+
+test("surface preset: a driver {set} moves the fader's cap", async ({
+  page,
+  browser,
+  request,
+}) => {
+  const setupCode = await createHostSession(page);
+  const setup = await TestDriver.setup(request, setupCode, surfaceConfig());
+  const driver = new TestDriver();
+  await driver.connect(setup.wsPath);
+  const alice = await joinAsPlayer(browser, setup.joinCode, "Alice");
+  await alice.setViewportSize({ width: 844, height: 390 });
+  await alice.getByTestId("ready-toggle").click();
+  driver.send({ type: "start" });
+
+  const fader = alice.getByTestId("control-fader1");
+  await expect(fader).toHaveAttribute("aria-valuenow", "0");
+  driver.send({ type: "message", payload: { set: { fader1: 0.75 } } });
+  await expect(fader).toHaveAttribute("aria-valuenow", "0.75");
   driver.send({ type: "end" });
   driver.close();
 });

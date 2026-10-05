@@ -1,3 +1,4 @@
+import { TestDriver } from "./test-driver";
 import {
   test,
   expect,
@@ -419,6 +420,35 @@ test.describe.serial("full protocol flow over one session", () => {
     await p1.waitFor(
       (m) => m.type === "player_updated" && (m.player as any).schemaId === "tank",
     );
+  });
+
+  test("device_info reaches the driver as player_updated.device and the next snapshot", async () => {
+    const device = { class: "tablet", width: 1024, height: 768, touch: true, motion: false };
+    const cursor = driver.mark();
+    p1.send({ type: "device_info", device });
+    const updated = await driver.waitFor(
+      (m) =>
+        m.type === "player_updated" &&
+        (m.player as any).playerId === p1Id &&
+        (m.player as any).device !== undefined,
+      { after: cursor },
+    );
+    expect((updated.player as any).device).toEqual(device);
+
+    // Malformed device info is dropped without a response.
+    p1.send({ type: "device_info", device: { ...device, class: "watch" } } as any);
+    await p1.expectNoResponse((m) => m.type === "error");
+
+    // A reconnecting driver sees it in the snapshot.
+    const oldDriver = driver;
+    const newDriver = await WsClient.open(`?role=driver&token=${driverToken}`, {
+      label: "driver-device-replacement",
+    });
+    expect((await oldDriver.waitForClose()).code).toBe(4010);
+    const snapshot = await newDriver.waitForType("snapshot");
+    driver = newDriver;
+    const players = (snapshot.snapshot as any).players as any[];
+    expect(players.find((p) => p.playerId === p1Id).device).toEqual(device);
   });
 
   test("malformed, unknown and oversized frames never take the session down", async () => {
@@ -2224,4 +2254,20 @@ test.describe("driver setup rate limiting", () => {
     const other = await driverSetup(request, "ZYXWVU");
     expect(other.status).toBe(404);
   });
+});
+
+
+test("Driver SDK sets up, folds the snapshot and sends session commands", async ({ request }) => {
+  await devLogin(request, uniqueEmail("sdk-driver"));
+  const { setupCode } = await createHostSession(request);
+  const setup = await TestDriver.setup(request, setupCode);
+  const driver = new TestDriver();
+  try {
+    await driver.connect(setup.wsUrl);
+    const snapshot = await driver.waitFor(msg => msg.type === "snapshot");
+    expect(snapshot.snapshot).toMatchObject({ sessionId: setup.sessionId, protocolVersion: 2, players: [] });
+    driver.send({ type: "end" });
+    expect(await driver.waitFor(msg => msg.type === "state_changed" && msg.state === "ended"))
+      .toMatchObject({ reason: "driver_command" });
+  } finally { driver.close(); }
 });

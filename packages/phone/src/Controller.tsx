@@ -6,6 +6,7 @@ import {
   type KapulaBackground,
   type KapulaPlayerClientMessage,
 } from "@kapula/protocol";
+import { seedValueFor, type ControlOverrides } from "./driver-payload.js";
 import { ControlWidget } from "./ControlWidget.js";
 import { applyLayoutOverride, type LayoutOverride } from "./layout-override.js";
 import { resolveLayout, type Viewport } from "./layout-utils.js";
@@ -15,8 +16,7 @@ import { TextEntry } from "./TextEntry.js";
 import { requestGyroAccess, useGyroInput, type GyroAccess } from "./useGyro.js";
 import type { SeqCounter } from "./seq-counter.js";
 import {
-  POINTER_THROTTLE_MS,
-  THROTTLE_MS,
+  inputThrottleMs,
   useInputSender,
 } from "./useInputSender.js";
 import { useMotionStream } from "./useMotionStream.js";
@@ -35,6 +35,8 @@ type ControllerProps = {
   seq?: SeqCounter;
   /** The driver's background image, drawn behind the controls. */
   background?: KapulaBackground;
+  /** The driver's `set` / `labels` pushes; cleared by the parent on a schema switch. */
+  overrides?: ControlOverrides;
 };
 
 /**
@@ -55,17 +57,44 @@ export const Controller = ({
   layoutOverride = null,
   seq,
   background,
+  overrides,
 }: ControllerProps) => {
-  const hasPointerSurface = schema.controls.some(
-    (c) => c.type === "raw" || c.type === "touchpad",
-  );
-  const { setControl } = useInputSender(
+  const { setControl, seedControl } = useInputSender(
     send,
     !disabled,
     seq,
-    hasPointerSurface ? POINTER_THROTTLE_MS : THROTTLE_MS,
+    inputThrottleMs(schema),
   );
   useWakeLock(keepAwake && !disabled);
+  // Pushed values join the sender's state silently, so the next frame
+  // (caused by any other control) reports them rather than the old ones.
+  const seededRevRef = useRef<Record<string, number>>({});
+  useEffect(() => {
+    if (!overrides) return;
+    for (const control of schema.controls) {
+      const pushed = overrides.values[control.id];
+      // Only fresh pushes: an older one must not undo what the player did since.
+      if (!pushed || seededRevRef.current[control.id] === pushed.rev) continue;
+      seededRevRef.current[control.id] = pushed.rev;
+      const value = seedValueFor(control, pushed.value);
+      if (value !== undefined) seedControl(control.id, value);
+    }
+  }, [overrides?.values, schema, seedControl]);
+  // Fingers resting on the box's own surface (not on a control) are the
+  // fine-mode modifier.
+  const [fineMode, setFineMode] = useState(false);
+  const fineFingersRef = useRef(new Set<number>());
+  const releaseFine = (pointerId: number) => {
+    if (fineFingersRef.current.delete(pointerId)) {
+      setFineMode(fineFingersRef.current.size > 0);
+    }
+  };
+  useEffect(() => {
+    if (disabled) {
+      fineFingersRef.current.clear();
+      setFineMode(false);
+    }
+  }, [disabled]);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [viewport, setViewport] = useState<Viewport | null>(null);
   const frame = useContentFrame();
@@ -136,6 +165,16 @@ export const Controller = ({
       className="flex-1 relative overflow-hidden select-none"
       style={{ touchAction: "none", ...backgroundStyle(background) }}
       data-background={background?.url}
+      data-fine-mode={fineMode ? "true" : undefined}
+      onPointerDown={(e) => {
+        if (disabled) return;
+        const target = e.target as Element;
+        if (target.closest("[data-kp-widget]")) return;
+        fineFingersRef.current.add(e.pointerId);
+        setFineMode(true);
+      }}
+      onPointerUp={(e) => releaseFine(e.pointerId)}
+      onPointerCancel={(e) => releaseFine(e.pointerId)}
     >
       {measured && rawControl && (
         <RawTouchSurface
@@ -152,13 +191,20 @@ export const Controller = ({
           layoutOverride,
           viewport,
         ).controls.map((resolved) => (
-          <ControlWidget
+          <div
             key={resolved.control.id}
-            resolved={resolved}
-            disabled={disabled}
-            setControl={setControl}
-            onOpenText={openText}
-          />
+            data-kp-widget
+            style={{ display: "contents" }}
+          >
+            <ControlWidget
+              resolved={resolved}
+              disabled={disabled}
+              setControl={setControl}
+              onOpenText={openText}
+              overrides={overrides}
+              fineMode={fineMode}
+            />
+          </div>
         ))}
       {textControl && !disabled && (
         <TextEntry

@@ -354,6 +354,60 @@ const ROSTER_PRESET: Partial<KapulaSessionConfigInput> = {
   ],
 };
 
+// The control-surface path (a MIDI-style panel): an exact layout under slim
+// chrome with the fast frame rate. Three vertical faders, an absolute and an
+// endless knob, a toggle, a free (non-spring) XY stick and a 4×4 grid of
+// touchpads, plus a "Transport" page of momentary rect buttons on the strip.
+const SURFACE_GRID = Array.from({ length: 16 }, (_, i) => ({
+  type: "touchpad" as const,
+  id: `pad${i + 1}`,
+  x: 62 + (i % 4) * 9,
+  y: 22 + Math.floor(i / 4) * 18,
+  w: 8,
+  h: 16,
+}));
+
+const SURFACE_SCHEMA: ControlSchemaInput = {
+  id: "surface",
+  name: "Surface",
+  orientation: "landscape",
+  rate: "fast",
+  controls: [
+    { type: "fader", id: "fader1", label: "Vol", axis: "v", x: 7, y: 52, w: 7, h: 80 },
+    { type: "fader", id: "fader2", label: "Pan", axis: "v", x: 16, y: 52, w: 7, h: 80 },
+    { type: "fader", id: "fader3", label: "Send", axis: "v", x: 25, y: 52, w: 7, h: 80 },
+    { type: "knob", id: "knob1", label: "Tone", x: 37, y: 28, w: 9, h: 28 },
+    { type: "knob", id: "knob2", label: "Scrub", mode: "endless", x: 37, y: 62, w: 9, h: 28 },
+    { type: "button", id: "mute", label: "Mute", mode: "toggle", x: 37, y: 88, w: 9, h: 14 },
+    { type: "joystick", id: "xy", label: "XY", mode: "full", spring: false, x: 50, y: 52, w: 12, h: 60 },
+    ...SURFACE_GRID,
+  ],
+};
+
+const TRANSPORT_SCHEMA: ControlSchemaInput = {
+  id: "transport",
+  name: "Transport",
+  orientation: "landscape",
+  rate: "fast",
+  controls: [
+    { type: "button", id: "prev", label: "Prev", shape: "rect", mode: "momentary" },
+    { type: "button", id: "play", label: "Play", shape: "rect", mode: "momentary" },
+    { type: "button", id: "stop", label: "Stop", shape: "rect", mode: "momentary" },
+    { type: "button", id: "rec", label: "Rec", shape: "rect", mode: "momentary" },
+    { type: "button", id: "next", label: "Next", shape: "rect", mode: "momentary" },
+  ],
+};
+
+const SURFACE_PRESET: Partial<KapulaSessionConfigInput> = {
+  game: "Surface Debug",
+  driverAppUuid: DEBUG_DRIVER_APP_UUID,
+  minPlayers: 1,
+  maxPlayers: 4,
+  chrome: "slim",
+  disallowLayoutCustomization: true,
+  schemas: [SURFACE_SCHEMA, TRANSPORT_SCHEMA],
+};
+
 export const DEBUG_PRESETS: { key: string; label: string; config: object }[] = [
   { key: "generic", label: "Generic", config: {} },
   { key: "tank", label: "Tank", config: TANK_PRESET },
@@ -369,6 +423,7 @@ export const DEBUG_PRESETS: { key: string; label: string; config: object }[] = [
   { key: "mouse", label: "Remote", config: MOUSE_PRESET },
   { key: "quiz", label: "Quiz", config: QUIZ_PRESET },
   { key: "roster", label: "Roster", config: ROSTER_PRESET },
+  { key: "surface", label: "Surface", config: SURFACE_PRESET },
 ];
 
 /**

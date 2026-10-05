@@ -304,6 +304,7 @@ export const createSignaling = (
     const config = parseSessionConfig(session);
     replaceSocket(runtime.players.get(playerId));
     runtime.players.set(playerId, ws);
+    runtime.devices.delete(playerId);
     runtimes.touchActivity(runtime);
 
     sendTo(ws, {
@@ -396,6 +397,18 @@ export const createSignaling = (
               broadcast(runtime, {
                 type: "player_updated",
                 player: toPlayerInfo(runtime, updated),
+              });
+            }
+            return;
+          }
+          case "device_info": {
+            runtime.devices.set(playerId, msg.device);
+            const players = await store.getActivePlayersBySession(runtime.sessionId);
+            const self = players.find((p) => p.id === playerId);
+            if (self) {
+              broadcast(runtime, {
+                type: "player_updated",
+                player: toPlayerInfo(runtime, self),
               });
             }
             return;
@@ -503,6 +516,7 @@ export const createSignaling = (
     ws.on("close", () => {
       if (runtime.players.get(playerId) !== ws) return;
       runtime.players.delete(playerId);
+      runtime.devices.delete(playerId);
       broadcast(runtime, { type: "player_disconnected", playerId });
     });
   };

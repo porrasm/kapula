@@ -1,8 +1,13 @@
-import type { KapulaInputValue } from "@kapula/protocol";
+import { useEffect, useState, type CSSProperties } from "react";
+import type { KapulaControl, KapulaInputValue } from "@kapula/protocol";
 import { roundAxis } from "./axis-utils.js";
+import { toggleNext } from "./control-state.js";
 import { Dpad } from "./Dpad.js";
+import { Fader } from "./Fader.js";
+import { Knob } from "./Knob.js";
 import { Joystick } from "./Joystick.js";
 import { RawTouchSurface } from "./RawTouchSurface.js";
+import type { ControlOverrides } from "./driver-payload.js";
 import type { ControlBox } from "./layout-override.js";
 import type { ResolvedControl } from "./layout-utils.js";
 
@@ -17,6 +22,10 @@ type ControlWidgetProps = {
   setControl: (id: string, value: KapulaInputValue, immediate: boolean) => void;
   /** Opens the text field of a `text` control (the live controller only). */
   onOpenText?: (controlId: string) => void;
+  /** The driver's `set` / `labels` pushes (driver-payload.ts). */
+  overrides?: ControlOverrides;
+  /** A second finger holds fine mode on the controller (faders, knobs). */
+  fineMode?: boolean;
 };
 
 /**
@@ -30,8 +39,12 @@ export const ControlWidget = ({
   inert = false,
   setControl,
   onOpenText,
+  overrides,
+  fineMode = false,
 }: ControlWidgetProps) => {
   const control = resolved.control;
+  const label = overrides?.labels[control.id] ?? ("label" in control ? control.label : undefined);
+  const pushed = overrides?.values[control.id];
   const inertClass = inert ? " pointer-events-none" : "";
   if (control.type === "joystick") {
     const mode = control.mode;
@@ -43,7 +56,7 @@ export const ControlWidget = ({
         {mode === "dpad" ? (
           <Dpad
             size={resolved.width}
-            label={control.label}
+            label={label}
             testId={`control-${control.id}`}
             disabled={disabled}
             // Direction changes are edges like button presses: rare,
@@ -55,7 +68,13 @@ export const ControlWidget = ({
             width={resolved.width}
             height={resolved.height}
             mode={mode}
-            label={control.label}
+            spring={control.spring}
+            label={label}
+            external={
+              pushed && typeof pushed.value !== "boolean"
+                ? { value: stickPush(mode, pushed.value), rev: pushed.rev }
+                : undefined
+            }
             testId={`control-${control.id}`}
             disabled={disabled}
             onChange={(x, y, released) =>
@@ -63,6 +82,60 @@ export const ControlWidget = ({
             }
           />
         )}
+      </div>
+    );
+  }
+  if (control.type === "fader") {
+    return (
+      <div
+        className={`absolute${inertClass}`}
+        style={controlBoxStyle(resolved)}
+      >
+        <Fader
+          width={resolved.width}
+          height={resolved.height}
+          axis={control.axis}
+          spring={control.spring}
+          defaultValue={control.default}
+          label={label}
+          external={
+            typeof pushed?.value === "number"
+              ? { value: pushed.value, rev: pushed.rev }
+              : undefined
+          }
+          testId={`control-${control.id}`}
+          disabled={disabled}
+          fineMode={fineMode}
+          onChange={(value, released) =>
+            setControl(control.id, roundAxis(value), released)
+          }
+        />
+      </div>
+    );
+  }
+  if (control.type === "knob") {
+    return (
+      <div
+        className={`absolute${inertClass}`}
+        style={controlBoxStyle(resolved)}
+      >
+        <Knob
+          size={Math.min(resolved.width, resolved.height)}
+          mode={control.mode}
+          defaultValue={control.default}
+          label={label}
+          external={
+            typeof pushed?.value === "number"
+              ? { value: pushed.value, rev: pushed.rev }
+              : undefined
+          }
+          testId={`control-${control.id}`}
+          disabled={disabled}
+          fineMode={fineMode}
+          onChange={(value, released) =>
+            setControl(control.id, roundAxis(value), released)
+          }
+        />
       </div>
     );
   }
@@ -78,7 +151,7 @@ export const ControlWidget = ({
           height={resolved.height}
           disabled={disabled}
           setControl={setControl}
-          pad={{ label: control.label }}
+          pad={{ label }}
         />
       </div>
     );
@@ -94,9 +167,9 @@ export const ControlWidget = ({
         // focus that happens inside a completed tap.
         onClick={() => onOpenText?.(control.id)}
         onContextMenu={(e) => e.preventDefault()}
-        aria-label={control.label ?? "Type text"}
+        aria-label={label ?? "Type text"}
       >
-        ⌨{control.label ? ` ${control.label}` : ""}
+        ⌨{label ? ` ${label}` : ""}
       </button>
     );
   }
@@ -106,6 +179,24 @@ export const ControlWidget = ({
   // "rect" squares off the corners — a circle under a thumb, a pill on the
   // shoulder / aux rows otherwise.
   const rounding = control.shape === "rect" ? "rounded-xl" : "rounded-full";
+  if (control.mode === "toggle") {
+    return (
+      <ToggleButton
+        id={control.id}
+        label={label ?? control.label}
+        pushed={
+          typeof pushed?.value === "boolean"
+            ? { value: pushed.value, rev: pushed.rev }
+            : undefined
+        }
+        shape={control.shape ?? "round"}
+        className={`absolute ${rounding} border-kp-border font-bold leading-tight overflow-hidden disabled:opacity-40 ${buttonClasses(resolved)}${inertClass}`}
+        style={controlBoxStyle(resolved)}
+        disabled={disabled}
+        setControl={setControl}
+      />
+    );
+  }
   return (
     <button
       disabled={disabled}
@@ -121,7 +212,76 @@ export const ControlWidget = ({
       onPointerCancel={() => setControl(control.id, false, true)}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {control.label}
+      {label ?? control.label}
+    </button>
+  );
+};
+
+/**
+ * A `mode: "toggle"` button: each tap (pointerup inside the button) flips a
+ * boolean that is sent as the control's value and drawn as a persistent lit
+ * state (the `active:` styling as a plain class). Inert editor boxes ignore
+ * pointers, so the layout editor never toggles it.
+ */
+const ToggleButton = ({
+  id,
+  label,
+  pushed,
+  shape,
+  className,
+  style,
+  disabled,
+  setControl,
+}: {
+  id: string;
+  label: string;
+  /** A driver-pushed lit state: shown, never reported. */
+  pushed?: { value: boolean; rev: number };
+  shape: string;
+  className: string;
+  style: React.CSSProperties;
+  disabled: boolean;
+  setControl: ControlWidgetProps["setControl"];
+}) => {
+  const [on, setOn] = useState(false);
+  const [pressed, setPressed] = useState(false);
+  useEffect(() => {
+    if (pushed) setOn(pushed.value);
+  }, [pushed?.rev]);
+  return (
+    <button
+      disabled={disabled}
+      data-testid={`control-${id}`}
+      data-shape={shape}
+      data-mode="toggle"
+      aria-pressed={on}
+      className={`${className} ${
+        on || pressed
+          ? "bg-kp-accent-primary text-kp-accent-on-primary"
+          : "bg-kp-bg-tertiary text-kp-text-primary"
+      }`}
+      style={{ ...style, touchAction: "none" }}
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setPressed(true);
+      }}
+      onPointerUp={(e) => {
+        setPressed(false);
+        const r = e.currentTarget.getBoundingClientRect();
+        const inside =
+          e.clientX >= r.left &&
+          e.clientX <= r.right &&
+          e.clientY >= r.top &&
+          e.clientY <= r.bottom;
+        if (!inside) return;
+        const next = toggleNext(on);
+        setOn(next);
+        setControl(id, next, true);
+      }}
+      onPointerCancel={() => setPressed(false)}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      {label}
     </button>
   );
 };
@@ -141,13 +301,41 @@ const axisValue = (
   return mode === "x" ? { x } : mode === "y" ? { y } : { x, y };
 };
 
+/** A pushed stick value as an `{x, y}` pair; a bare number is the one axis of x/y sticks. */
+const stickPush = (
+  mode: "full" | "relative" | "x" | "y",
+  value: number | { x?: number; y?: number },
+) =>
+  typeof value === "number"
+    ? mode === "y"
+      ? { y: value }
+      : { x: value }
+    : value;
+
 /** CSS box for a control: the engine hands out centers, CSS wants corners. */
-export const controlBoxStyle = (box: ControlBox) => ({
+export const controlBoxStyle = (
+  box: ControlBox & { control?: KapulaControl },
+): CSSProperties => ({
   left: Math.round(box.x - box.width / 2),
   top: Math.round(box.y - box.height / 2),
   width: Math.round(box.width),
   height: Math.round(box.height),
+  ...accentStyle(box.control),
 });
+
+/**
+ * The control's `color` as the accent variable on its box (an `R G B`
+ * triplet, like the theme's own), so every kp-accent-primary class inside
+ * the control picks it up without new classes.
+ */
+export const accentStyle = (control?: KapulaControl): CSSProperties => {
+  const color = control && "color" in control ? control.color : undefined;
+  if (!color) return {};
+  const n = parseInt(color.slice(1), 16);
+  return {
+    ["--kp-accent-primary" as string]: `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`,
+  };
+};
 
 const buttonClasses = (resolved: ResolvedControl): string => {
   if (resolved.role === "shoulder") return "border-2 text-sm";
